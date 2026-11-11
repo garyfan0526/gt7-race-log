@@ -1,5 +1,10 @@
 # GT7 賽事戰績簿
 
+- **網址**：https://garyfan0526.github.io/gt7-race-log/（iPhone 用 Safari 開 →「分享 → 加入主畫面」）
+- **後端**：Apps Script「GT7 戰績簿 API」，在 beeckham03@gmail.com 帳號；資料在該帳號的 Google 試算表「GT7 賽事紀錄」與雲端硬碟「GT7 截圖」
+- **更新網頁**：改完檔案後在這個資料夾 `git commit` → `git push`，約 1 分鐘後生效
+- **更新後端**：在 Apps Script 改 `Code.gs` → 部署 → 管理部署作業 → 編輯 → 版本選「新版本」→ 部署（網址不變）
+
 把 GT7 結算截圖丟進來，自動記下「哪台車、哪條賽道、第幾名、什麼成績」，下次跑同一條賽道時，在地圖上點一下就能看到過去的紀錄。
 
 ## 檔案
