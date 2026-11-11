@@ -471,3 +471,12 @@ html.standalone .signature { right: calc(env(safe-area-inset-right) + 22px); }
 @media (display-mode: standalone) { .topbar { padding-top: calc(env(safe-area-inset-top) + 30px); } }
 html.standalone .topbar { padding-top: calc(env(safe-area-inset-top) + 30px); }
 .ver { margin-right: auto; font-size: 11px; color: var(--muted); }
+
+/* ───────── 主畫面捷徑（standalone）微調 v18：覆蓋上面兩段 ───────── */
+@media (display-mode: standalone) { .topbar { padding-top: calc(env(safe-area-inset-top) + 16px); } }
+html.standalone .topbar { padding-top: calc(env(safe-area-inset-top) + 16px); }
+/* 底部讓出 Home 指示條：整頁內容停在指示條上方，下面那條是深色底 */
+html.standalone body { padding-bottom: env(safe-area-inset-bottom); }
+@media (display-mode: standalone) { body { padding-bottom: env(safe-area-inset-bottom); } }
+/* 署名放進底部深色區、靠右（避開圓角與中間的指示條） */
+html.standalone .signature { bottom: max(3px, calc(env(safe-area-inset-bottom) / 2 - 6px)); right: calc(env(safe-area-inset-right) + 26px); }
