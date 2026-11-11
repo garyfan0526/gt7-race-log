@@ -112,8 +112,8 @@ function renderTopbar() {
   $('#tbCar').textContent = top ? `${top[0]}（${top[1]} 場）` : '—';
   $('#tbPlace').textContent = S.screen === 'home' ? 'GT7' : S.screen === 'garage' ? '車庫' : S.screen === 'world' ? '世界賽道' : regionOf(S.region).name;
   const inGarage = S.screen === 'garage';
-  $('#garageIco').textContent = inGarage ? '🗺' : '🚗';
-  $('#garageTxt').textContent = inGarage ? ' 地圖' : ' 車庫';
+  $('#garageIco').setAttribute('href', inGarage ? '#iMap' : '#iGarage');
+  $('#garageTxt').textContent = inGarage ? 'MAP' : 'GARAGE';
   $('#btnGarage').classList.toggle('hidden', S.screen === 'home'); // 首頁已有左右兩個入口，頂列不重複放
   $('#btnQueue').classList.toggle('hidden', !S.queue.length);
   $('#queueCount').textContent = S.queue.length;
