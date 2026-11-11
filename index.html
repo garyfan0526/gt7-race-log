@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,600&family=Kanit:ital,wght@1,900&family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css">
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -119,13 +119,14 @@
 <section class="screen hidden" id="garageScreen">
   <div class="gleft">
     <div class="gtools">
+      <div class="gmode" id="gMode"><button class="on" data-mode="mine">我的戰績</button><button data-mode="all">全部車款 <small>580 台</small></button></div>
       <div class="gfilters" id="gFilters">
         <button class="chip on" data-cls="all">全部</button><button class="chip" data-cls="Gr.1">Gr.1</button><button class="chip" data-cls="Gr.2">Gr.2</button>
         <button class="chip" data-cls="Gr.3">Gr.3</button><button class="chip" data-cls="Gr.4">Gr.4</button><button class="chip" data-cls="Gr.N">市售車</button>
         <button class="chip" data-cls="Gr.B">拉力</button><button class="chip" data-cls="Gr.X">特殊</button>
       </div>
       <div class="grow2">
-        <select id="gSort"><option value="wins">排序：勝場</option><option value="races">排序：跑過場數</option><option value="last">排序：最近開過</option></select>
+        <select id="gSort"><option value="wins">排序：勝場</option><option value="races">排序：跑過場數</option><option value="last">排序：最近開過</option><option value="name">排序：廠牌 A–Z</option></select>
         <input id="gSearch" placeholder="🔍 搜尋車名／廠牌" autocomplete="off">
       </div>
       <div class="muted gstats" id="gStats"></div>
@@ -254,10 +255,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
-<script src="tracks.js?v=11"></script>
-<script src="events.js?v=11"></script>
-<script src="cars.js?v=11"></script>
-<script src="garage.js?v=11"></script>
-<script src="app.js?v=11"></script>
+<script src="tracks.js?v=13"></script>
+<script src="events.js?v=13"></script>
+<script src="cars.js?v=13"></script>
+<script src="garage.js?v=13"></script>
+<script src="app.js?v=13"></script>
 </body>
 </html>
