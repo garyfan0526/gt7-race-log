@@ -290,3 +290,18 @@ h4 { margin: 0 0 10px; }
   .region-nav .btn, .views button { padding: 4px 9px; font-size: 12px; }
   .events { display: none; }
 }
+
+/* ───────── GT 標誌、手機頂列合併選單、賽事筆數 ───────── */
+.tb-logo { font-family: "Kanit", var(--en); font-style: italic; font-weight: 900; font-size: 22px; letter-spacing: -2px; padding-right: 3px; }
+.evcard .ec-n { margin-left: auto; font-size: 11px; color: var(--muted); white-space: nowrap; flex: none; }
+.tb-break { display: none; }
+@media (max-width: 760px) {
+  .tb-logo { font-size: 16px; }
+  .tb-break { display: block; flex-basis: 100%; height: 0; order: 4; }
+  .topbar.with-nav .region-nav { position: static; order: 5; padding: 6px 0 0 10px; gap: 6px; }
+  .topbar.with-nav .tb-actions { order: 6; width: auto; margin-left: auto; padding: 6px 10px 0 6px; }
+  .topbar.with-nav .bt { display: none; }               /* 按鈕只留圖示，讓出空間 */
+  .topbar.with-nav .btn.back { padding: 5px 10px; }
+  .topbar.with-nav .views button { padding: 5px 9px; font-size: 13px; }
+  .topbar.with-nav .tb-actions .btn { padding: 5px 10px; font-size: 15px; }
+}

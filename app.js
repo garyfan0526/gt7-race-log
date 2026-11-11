@@ -213,7 +213,16 @@ function gotoTrack(id) {
 function showWorld() {
   S.screen = 'world'; closePanel();
   $('#worldScreen').classList.remove('hidden'); $('#regionScreen').classList.add('hidden');
-  renderGlobe(); renderWorld(); renderTopbar();
+  placeNav(); renderGlobe(); renderWorld(); renderTopbar();
+}
+
+// 手機直放：把「◀ 世界賽道＋子區域」搬到頂列按鈕那一排，地圖可以從最上面開始
+const navInTopbar = () => S.screen === 'region' && matchMedia('(max-width: 760px)').matches;
+function placeNav() {
+  const nav = $('#regionNav'), bar = $('.topbar');
+  if (navInTopbar()) { if (nav.parentElement !== bar) bar.insertBefore(nav, $('.tb-actions')); }
+  else if (nav.parentElement !== $('#regionScreen')) $('#regionScreen').insertBefore(nav, $('.legend'));
+  bar.classList.toggle('with-nav', nav.parentElement === bar);
 }
 
 /* ───────────────────────── 地區地圖 ───────────────────────── */
@@ -229,7 +238,7 @@ function enterRegion(id, viewId) {
 }
 
 function renderRegion() {
-  renderViewTabs(); renderMap(); renderEvents(); renderTopbar();
+  placeNav(); renderViewTabs(); renderMap(); renderEvents(); renderTopbar();
 }
 
 function renderViewTabs() {
@@ -252,7 +261,7 @@ function renderMap() {
   const wrap = $('#regionScreen'), W = wrap.clientWidth, H = wrap.clientHeight;
   const v = regionOf(S.region).views.find(x => x.id === S.view);
   const narrow = W < 760;
-  const top = narrow ? 80 : 110, bottom = narrow ? 50 : (S.records.some(r => trackById(r.trackId)?.region === S.region) ? H * 0.24 : 40);
+  const top = navInTopbar() ? 30 : narrow ? 80 : 110, bottom = narrow ? 50 : (S.records.some(r => trackById(r.trackId)?.region === S.region) ? H * 0.24 : 40);
   projection = d3.geoMercator().fitExtent([[40, top], [W - 40, H - bottom]],
     { type: 'Feature', geometry: { type: 'MultiPoint', coordinates: v.bounds } });
   const path = d3.geoPath(projection);
@@ -377,7 +386,7 @@ function pickLabels(items, W) {
 // 標籤排斥：互不重疊、不蓋住賽道點，盡量靠近自己的點
 function layoutLabels(items, W, H) {
   const compact = labelsEl.classList.contains('compact');
-  compactTop = compact ? 40 : 52; compactBottom = compact ? 38 : 4; // 小螢幕底部留給提示條
+  compactTop = navInTopbar() ? 6 : compact ? 40 : 52; compactBottom = compact ? 38 : 4; // 小螢幕底部留給提示條
   const gapX = 8, gapY = 6, R = 12, OFF = 26;
   if (!items.length) return;
   // 從賽道群中心往外推：每個標籤放在自己的點「遠離中心」的那一側
@@ -481,7 +490,8 @@ function renderPanel() {
     body.innerHTML = `<button class="btn small" data-back>◀ 全部賽事</button>
       <div class="ev-detail">${evCard(cur, true)}</div>
       <button class="btn primary ev-add" data-addev="${esc(evKey(cur))}">＋ 記錄這場</button>
-      ${rs.length ? `<div class="group">${rs.map((r, i) => recRow(r, i === 0)).join('')}</div>` : '<div class="empty">這場還沒有紀錄</div>'}`;
+      ${rs.length ? `<h4 class="others-h">全部紀錄 ${rs.length} 筆（依名次、日期排序；每筆都可以單獨編輯或刪除）</h4>
+        <div class="group">${rs.map((r, i) => recRow(r, i === 0)).join('')}</div>` : '<div class="empty">這場還沒有紀錄</div>'}`;
     return;
   }
 
@@ -503,7 +513,7 @@ function evCard(e, big, best) {
     <div class="ec-name">${esc(e.n)}</div>
     <div class="ec-lo">${esc(e.l)}</div>
     ${e.cars || e.tyres ? `<div class="ec-rule">${esc([e.cars, e.tyres].filter(Boolean).join(' · '))}</div>` : ''}
-    <div class="ec-res">${best ? `${trophy(best.position)}<div class="ec-car"><div>${esc(best.car)}</div><small>${esc(best.time || '')}</small></div>`
+    <div class="ec-res">${best ? `${trophy(best.position)}<div class="ec-car"><div>${esc(best.car)}</div><small>${esc(best.time || '')}</small></div>${(() => { const n = recsOfEvent(e).length; return n > 1 && !big ? `<span class="ec-n">共 ${n} 筆</span>` : ''; })()}`
       : '<span class="ec-none">尚未紀錄</span>'}</div>
   </div>`;
 }
@@ -815,7 +825,7 @@ $('#fileInput').onchange = e => { handleFiles(e.target.files).finally(() => { e.
 
 window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => { e.preventDefault(); handleFiles([...e.dataTransfer.files].filter(f => f.type.startsWith('image/'))); });
-window.addEventListener('resize', () => { clearTimeout(window._rz); window._rz = setTimeout(() => S.screen === 'world' ? renderGlobe() : renderMap(), 150); });
+window.addEventListener('resize', () => { clearTimeout(window._rz); window._rz = setTimeout(() => { placeNav(); S.screen === 'world' ? renderGlobe() : renderMap(); }, 150); });
 
 function refreshAll() {
   renderTopbar();

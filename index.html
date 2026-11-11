@@ -9,22 +9,23 @@
 <meta name="theme-color" content="#0b0c0f">
 <title>GT7 賽事戰績簿</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,600&family=Kanit:ital,wght@1,900&family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
 <!-- ── 頂列（仿遊戲狀態列） ── -->
 <header class="topbar">
-  <div class="tb-logo" id="btnHome" title="回世界賽道">戰</div>
+  <div class="tb-logo" id="btnHome" title="回世界賽道">GT</div>
   <div class="tb-cell tb-title"><small id="tbCrumb">戰績簿</small><span id="tbPlace">世界賽道</span></div>
   <div class="tb-cell"><small>賽事紀錄</small><span class="num" id="tbRecords">0</span></div>
   <div class="tb-cell"><small>拿過第一</small><span><span class="num gold" id="tbGold">0</span><span class="num dim"> / <span id="tbTotal">0</span></span> <em>地點</em></span></div>
   <div class="tb-cell tb-car"><small>最常用車</small><span id="tbCar">—</span></div>
+  <div class="tb-break"></div>
   <div class="tb-actions">
-    <label class="btn primary" title="上傳結算截圖">📷 截圖<input type="file" id="fileInput" accept="image/*" multiple hidden></label>
-    <button class="btn" id="btnManual">✍ 手動</button>
+    <label class="btn primary" title="上傳結算截圖">📷<span class="bt"> 截圖</span><input type="file" id="fileInput" accept="image/*" multiple hidden></label>
+    <button class="btn" id="btnManual" title="手動輸入">✍<span class="bt"> 手動</span></button>
     <button class="btn hidden" id="btnQueue">⏳ <span id="queueCount">0</span></button>
     <button class="btn icon" id="btnSettings" title="設定">⚙</button>
   </div>
@@ -52,8 +53,8 @@
 <section class="screen hidden" id="regionScreen">
   <svg id="map"></svg>
   <div id="labels"></div>
-  <div class="region-nav">
-    <button class="btn back" id="btnBack">◀ 世界賽道</button>
+  <div class="region-nav" id="regionNav">
+    <button class="btn back" id="btnBack" title="回世界賽道">◀<span class="bt"> 世界賽道</span></button>
     <div class="views" id="viewTabs"></div>
   </div>
   <div class="legend">
@@ -177,8 +178,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
-<script src="tracks.js?v=5"></script>
-<script src="events.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="tracks.js?v=7"></script>
+<script src="events.js?v=7"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>
