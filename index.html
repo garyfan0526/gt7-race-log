@@ -11,19 +11,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,600&family=Kanit:ital,wght@1,900&family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
 <!-- ── 頂列（仿遊戲狀態列） ── -->
 <header class="topbar">
-  <div class="tb-logo" id="btnHome" title="回世界賽道">GT</div>
+  <div class="tb-logo" id="btnHome" title="回首頁">GT</div>
   <div class="tb-cell tb-title"><small id="tbCrumb">戰績簿</small><span id="tbPlace">世界賽道</span></div>
   <div class="tb-cell"><small>賽事紀錄</small><span class="num" id="tbRecords">0</span></div>
   <div class="tb-cell"><small>拿過第一</small><span><span class="num gold" id="tbGold">0</span><span class="num dim"> / <span id="tbTotal">0</span></span> <em>地點</em></span></div>
   <div class="tb-cell tb-car"><small>最常用車</small><span id="tbCar">—</span></div>
   <div class="tb-break"></div>
   <div class="tb-actions">
+    <button class="btn" id="btnGarage" title="車庫／地圖切換"><span id="garageIco">🚗</span><span class="bt" id="garageTxt"> 車庫</span></button>
     <label class="btn primary" title="上傳結算截圖">📷<span class="bt"> 截圖</span><input type="file" id="fileInput" accept="image/*" multiple hidden></label>
     <button class="btn" id="btnManual" title="手動輸入">✍<span class="bt"> 手動</span></button>
     <button class="btn hidden" id="btnQueue">⏳ <span id="queueCount">0</span></button>
@@ -34,8 +35,51 @@
 
 <div class="banner hidden" id="banner"></div>
 
+<!-- ── 首頁：左世界賽道／右車庫（背景為 AI 生成圖、圖示自繪，非遊戲素材；由 _research/build_home.py 產生） ── -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="hFlagIco" viewBox="0 0 64 64"><rect x="12" y="8" width="4" height="50" rx="2" fill="#fff"/><g transform="translate(18 10)"><rect width="36" height="27" fill="#fff"/><g fill="#111"><rect width="9" height="9"/><rect x="18" width="9" height="9"/><rect x="9" y="9" width="9" height="9"/><rect x="27" y="9" width="9" height="9"/><rect y="18" width="9" height="9"/><rect x="18" y="18" width="9" height="9"/></g></g></symbol>
+  <symbol id="hGarageIco" viewBox="0 0 64 64"><path d="M6 26 L32 10 L58 26 L58 30 L32 14.5 L6 30 Z" fill="#fff"/><path d="M11 30 L32 17.5 L53 30 L53 54 L11 54 Z" fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"/><g fill="#fff"><rect x="18" y="33" width="28" height="3.5" rx="1"/><rect x="18" y="39" width="28" height="3.5" rx="1"/><rect x="18" y="45" width="28" height="3.5" rx="1"/></g></symbol>
+  <filter id="hShadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000" flood-opacity=".45"/></filter>
+</defs></svg>
+<section class="screen hidden" id="homeScreen">
+  <div class="hcard hc-world" id="goWorld">
+    <svg class="hc-scene" viewBox="0 0 1400 1045" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <image href="home-arena.jpg?v=1" width="1400" height="1045"/>
+      <g class="hc-marker" filter="url(#hShadow)">
+        <rect x="625.0" y="230" width="150" height="150" rx="30" fill="#0d0e11"/>
+        <rect x="626.5" y="231.5" width="147" height="147" rx="29" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="3"/>
+        <use href="#hFlagIco" x="652" y="257.0" width="96" height="96"/>
+        <path d="M684 379 L700 400 L716 379Z" fill="#0d0e11"/>
+      </g>
+    </svg>
+    <div class="hc-body">
+      <div class="hc-title">世界賽道</div>
+      <div class="hc-sub" id="hcWorldSub"></div>
+      <div class="hc-stat" id="hcWorldStat"></div>
+      <div class="hc-go">進入 ▶</div>
+    </div>
+  </div>
+  <div class="hcard hc-garage" id="goGarage">
+    <svg class="hc-scene" viewBox="0 0 1400 1045" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <image href="home-garage.jpg?v=1" width="1400" height="1045"/>
+      <g class="hc-marker" filter="url(#hShadow)">
+        <rect x="660.0" y="215" width="150" height="150" rx="30" fill="#0d0e11"/>
+        <rect x="661.5" y="216.5" width="147" height="147" rx="29" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="3"/>
+        <use href="#hGarageIco" x="687" y="242.0" width="96" height="96"/>
+        <path d="M719 364 L735 385 L751 364Z" fill="#0d0e11"/>
+      </g>
+    </svg>
+    <div class="hc-body">
+      <div class="hc-title">車庫</div>
+      <div class="hc-sub" id="hcGarageSub"></div>
+      <div class="hc-stat" id="hcGarageStat"></div>
+      <div class="hc-go">進入 ▶</div>
+    </div>
+  </div>
+</section>
+
 <!-- ── 世界賽道（選區） ── -->
-<section class="screen" id="worldScreen">
+<section class="screen hidden" id="worldScreen">
   <svg id="globe"></svg>
   <h1 class="world-title">世界賽道</h1>
   <div class="dials" id="dials"></div>
@@ -69,6 +113,26 @@
     <div class="events-grid" id="eventGrid"></div>
   </div>
   <div class="placing-hint hidden" id="placingHint">在地圖上點一下，放置新賽道 <button class="btn small" id="cancelPlace">取消</button></div>
+</section>
+
+<!-- ── 車庫 ── -->
+<section class="screen hidden" id="garageScreen">
+  <div class="gleft">
+    <div class="gtools">
+      <div class="gfilters" id="gFilters">
+        <button class="chip on" data-cls="all">全部</button><button class="chip" data-cls="Gr.1">Gr.1</button><button class="chip" data-cls="Gr.2">Gr.2</button>
+        <button class="chip" data-cls="Gr.3">Gr.3</button><button class="chip" data-cls="Gr.4">Gr.4</button><button class="chip" data-cls="Gr.N">市售車</button>
+        <button class="chip" data-cls="Gr.B">拉力</button><button class="chip" data-cls="Gr.X">特殊</button>
+      </div>
+      <div class="grow2">
+        <select id="gSort"><option value="wins">排序：勝場</option><option value="races">排序：跑過場數</option><option value="last">排序：最近開過</option></select>
+        <input id="gSearch" placeholder="🔍 搜尋車名／廠牌" autocomplete="off">
+      </div>
+      <div class="muted gstats" id="gStats"></div>
+    </div>
+    <div id="gList"></div>
+  </div>
+  <div class="gdetail" id="gDetail"></div>
 </section>
 
 <!-- ── 賽道面板 ── -->
@@ -111,7 +175,9 @@
           <label>參賽數<input name="totalCars" type="number" min="1" max="40"></label>
           <label>日期<input name="raceDate" type="date"></label>
         </div>
-        <label>車輛<input name="car" list="dlCars" required placeholder="例如 McLaren F1 '94"></label>
+        <label>車輛（從官方清單選，可打部分車名搜尋）<input name="car" list="dlCars" required placeholder="例如 458 Italia GT3" autocomplete="off"></label>
+        <div class="car-hint" id="carHint"></div>
+        <label class="chk"><input type="checkbox" name="carCustom"> 清單沒有這台（遊戲改版的新車），照我打的名稱存</label>
         <div class="row">
           <label class="grow">成績（第一名填總時間，其他填差距）<input name="time" placeholder="1:01:36.266 / +47.427 / 1 Lap"></label>
           <label>圈數<input name="laps" type="number" min="1"></label>
@@ -135,6 +201,16 @@
     <p class="muted">Gemini 額度用完時，截圖會先排在這裡，每小時自動重試辨識。辨識好的點一下確認即可；也可以直接手動填。</p>
     <div id="queueList"></div>
     <div class="form-foot"><button class="btn" id="btnRetryQueue">🔄 立即重試辨識</button></div>
+  </div>
+</div>
+
+<!-- ── 整理車名 ── -->
+<div class="modal hidden" id="carFixModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>整理車名</h3><button class="btn icon" data-close>✕</button></div>
+    <p class="muted">這些車名對不到官方清單。右邊已幫你挑了最接近的一台，確認後按「套用」，同名的紀錄會一起改；不想改的選「保持原樣」。</p>
+    <div id="carFixList"></div>
+    <div class="form-foot"><button class="btn primary" id="btnCarFixApply">套用</button></div>
   </div>
 </div>
 
@@ -178,8 +254,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
-<script src="tracks.js?v=7"></script>
-<script src="events.js?v=7"></script>
-<script src="app.js?v=7"></script>
+<script src="tracks.js?v=11"></script>
+<script src="events.js?v=11"></script>
+<script src="cars.js?v=11"></script>
+<script src="garage.js?v=11"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>

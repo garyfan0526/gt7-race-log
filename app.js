@@ -15,7 +15,7 @@ const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxQEzO0zwhfiIyv
 const S = {
   settings: JSON.parse(localStorage.getItem(LS_SETTINGS) || JSON.stringify({ apiUrl: DEFAULT_API_URL })),
   records: [], customTracks: [], queue: [],
-  screen: 'world', region: 'europe', view: null, hotRegion: 'europe', panelTrack: null, panelEvent: null,
+  screen: 'home', region: 'europe', view: null, hotRegion: 'europe', panelTrack: null, panelEvent: null,
   formQueue: [], formCur: null, placing: null,
 };
 
@@ -107,10 +107,14 @@ function renderTopbar() {
   $('#tbGold').textContent = ts.filter(t => trackStatus(t.id).cls === 'gold').length;
   $('#tbTotal').textContent = ts.length;
   const cnt = {};
-  S.records.forEach(r => r.car && (cnt[r.car] = (cnt[r.car] || 0) + 1));
+  S.records.forEach(r => { const k = carLabel(r.car); if (k) cnt[k] = (cnt[k] || 0) + 1; });
   const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
   $('#tbCar').textContent = top ? `${top[0]}（${top[1]} 場）` : '—';
-  $('#tbPlace').textContent = S.screen === 'world' ? '世界賽道' : regionOf(S.region).name;
+  $('#tbPlace').textContent = S.screen === 'home' ? 'GT7' : S.screen === 'garage' ? '車庫' : S.screen === 'world' ? '世界賽道' : regionOf(S.region).name;
+  const inGarage = S.screen === 'garage';
+  $('#garageIco').textContent = inGarage ? '🗺' : '🚗';
+  $('#garageTxt').textContent = inGarage ? ' 地圖' : ' 車庫';
+  $('#btnGarage').classList.toggle('hidden', S.screen === 'home'); // 首頁已有左右兩個入口，頂列不重複放
   $('#btnQueue').classList.toggle('hidden', !S.queue.length);
   $('#queueCount').textContent = S.queue.length;
 }
@@ -195,7 +199,7 @@ function renderRecent() {
   $('#recentStrip').innerHTML = rs.length ? rs.map(r => {
     const t = trackById(r.trackId);
     return `<div class="rcard" data-track="${esc(r.trackId)}">${trophy(r.position)}<div class="info">
-      <div class="t">${esc(t?.zh || r.trackId)}</div><div class="c">${esc(r.car)}</div>
+      <div class="t">${esc(t?.zh || r.trackId)}</div><div class="c">${esc(carLabel(r.car))}</div>
       <div class="d">${esc([r.event, r.raceDate].filter(Boolean).join(' · '))}</div></div></div>`;
   }).join('') : '<div class="recent-empty">還沒有紀錄 — 比完賽按右上角「📷 截圖」上傳結算畫面，或「✍ 手動」輸入</div>';
 }
@@ -210,9 +214,44 @@ function gotoTrack(id) {
   openPanel(id);
 }
 
+/* ───────────────────────── 首頁（左世界賽道／右車庫） ───────────────────────── */
+function showHome() {
+  S.screen = 'home'; closePanel();
+  ['worldScreen', 'regionScreen', 'garageScreen'].forEach(id => $('#' + id).classList.add('hidden'));
+  $('#homeScreen').classList.remove('hidden');
+  placeNav(); renderHome(); renderTopbar();
+}
+function renderHome() {
+  const ts = allTracks(), gold = ts.filter(t => trackStatus(t.id).cls === 'gold').length;
+  const evAll = typeof EVENTS === 'undefined' ? [] : EVENTS;
+  const evWon = evAll.filter(e => recsOfEvent(e).some(r => +r.position === 1)).length;
+  $('#hcWorldSub').textContent = `${ts.length} 個地點・${evAll.length} 場賽事`;
+  $('#hcWorldStat').innerHTML = `<b>${gold}</b> / ${ts.length} 地點拿過第一<br><b>${evWon}</b> / ${evAll.length} 場賽事拿過第一`;
+  const g = garageData(), top = [...g].sort((a, b) => b.wins - a.wins || b.races - a.races)[0];
+  $('#hcGarageSub').textContent = `官方 ${CAR.length} 台車款`;
+  $('#hcGarageStat').innerHTML = g.length
+    ? `開過 <b>${g.length}</b> 台・拿過第一 <b>${g.filter(x => x.wins).length}</b> 台<br>王牌：<b class="car">${esc(top.short)}</b>（🏆 ${top.wins}）`
+    : '還沒有紀錄<br>上傳截圖後，開過的車會出現在這裡';
+  renderHomeGlobe();
+}
+// 首頁競技場外牆的拱門：沿橢圓下半圈排兩層，越靠兩側越窄（透視）
+function renderHomeGlobe() {
+  const g = $('#hArches');
+  if (!g || g.childElementCount) return;
+  const cx = 400, cy = 318, rx = 138, ry = 46, n = 15;
+  let html = '';
+  for (let i = 0; i < n; i++) {
+    const t = Math.PI * (0.06 + 0.88 * (i + 0.5) / n);
+    const x = cx - rx * Math.cos(t), y = cy + ry * Math.sin(t), w = 11 * Math.sin(t) + 2;
+    for (const [dy, h] of [[10, 20], [36, 18]])
+      html += `<rect x="${(x - w / 2).toFixed(1)}" y="${(y + dy).toFixed(1)}" width="${w.toFixed(1)}" height="${h}" rx="${(w / 2).toFixed(1)}" fill="#4e3322" opacity=".85"/>`;
+  }
+  g.innerHTML = html;
+}
+
 function showWorld() {
   S.screen = 'world'; closePanel();
-  $('#worldScreen').classList.remove('hidden'); $('#regionScreen').classList.add('hidden');
+  $('#worldScreen').classList.remove('hidden'); $('#regionScreen').classList.add('hidden'); $('#garageScreen').classList.add('hidden'); $('#homeScreen').classList.add('hidden');
   placeNav(); renderGlobe(); renderWorld(); renderTopbar();
 }
 
@@ -233,7 +272,7 @@ const labelsEl = $('#labels');
 function enterRegion(id, viewId) {
   S.screen = 'region'; S.region = id;
   S.view = viewId || regionOf(id).views[0].id;
-  $('#worldScreen').classList.add('hidden'); $('#regionScreen').classList.remove('hidden');
+  $('#worldScreen').classList.add('hidden'); $('#garageScreen').classList.add('hidden'); $('#homeScreen').classList.add('hidden'); $('#regionScreen').classList.remove('hidden');
   renderRegion();
 }
 
@@ -448,7 +487,7 @@ function renderEvents() {
   $('#eventGrid').innerHTML = rows.map(r => {
     const t = trackById(r.trackId);
     return `<div class="ev-row" data-track="${esc(r.trackId)}"><div class="ev-name">${esc(r.event || r.layout || t?.zh)}
-      <small>${esc(r.layout || t?.zh || '')} · ${esc(r.car)}</small></div>
+      <small>${esc(r.layout || t?.zh || '')} · ${esc(carLabel(r.car))}</small></div>
       <div class="ev-pp">${(() => { const pp = r.ppLimit || eventOfRec(r)?.pp; return pp ? 'PP ' + esc(pp) : 'PP 不限'; })()}</div>${trophy(r.position)}</div>`;
   }).join('');
 }
@@ -513,7 +552,7 @@ function evCard(e, big, best) {
     <div class="ec-name">${esc(e.n)}</div>
     <div class="ec-lo">${esc(e.l)}</div>
     ${e.cars || e.tyres ? `<div class="ec-rule">${esc([e.cars, e.tyres].filter(Boolean).join(' · '))}</div>` : ''}
-    <div class="ec-res">${best ? `${trophy(best.position)}<div class="ec-car"><div>${esc(best.car)}</div><small>${esc(best.time || '')}</small></div>${(() => { const n = recsOfEvent(e).length; return n > 1 && !big ? `<span class="ec-n">共 ${n} 筆</span>` : ''; })()}`
+    <div class="ec-res">${best ? `${trophy(best.position)}<div class="ec-car"><div>${esc(carLabel(best.car))}</div><small>${esc(best.time || '')}</small></div>${(() => { const n = recsOfEvent(e).length; return n > 1 && !big ? `<span class="ec-n">共 ${n} 筆</span>` : ''; })()}`
       : '<span class="ec-none">尚未紀錄</span>'}</div>
   </div>`;
 }
@@ -524,7 +563,7 @@ function recRow(r, isBest, showEvent) {
     ${trophy(r.position)}
     ${url ? `<img class="thumb" src="${esc(url)}" data-full="${esc(url)}" alt="" loading="lazy">` : ''}
     <div class="info">
-      <div class="car">${esc(r.car)}<span class="src">${r.source === 'ai' ? 'AI' : '手動'}</span></div>
+      <div class="car">${esc(carLabel(r.car))}<span class="src">${r.source === 'ai' ? 'AI' : '手動'}</span></div>
       ${showEvent ? `<div class="meta">${esc([r.event || '（未填賽事）', r.layout].filter(Boolean).join(' · '))}</div>` : ''}
       <div class="meta">${[r.time, r.totalCars ? `${r.position}/${r.totalCars}` : '', r.laps ? r.laps + ' 圈' : '', r.raceDate].filter(Boolean).map(esc).join('　·　')}</div>
       ${r.fastestLap ? `<div class="meta">最速圈 ${esc(r.fastestLap)}</div>` : ''}
@@ -644,7 +683,7 @@ function fillLayouts(keep) {
 }
 function fillDatalists() {
   const uniq = arr => [...new Set(arr.filter(Boolean))].sort();
-  $('#dlCars').innerHTML = uniq(S.records.map(r => r.car)).map(v => `<option value="${esc(v)}">`).join('');
+  fillCarList(); // 車名選項＝官方 580 台清單（garage.js）
   fillEventList();
 }
 // 賽事名稱的選項：先列這條賽道的賽事（含配置與圈數提示），再列其他用過的名稱
@@ -683,6 +722,9 @@ function openNextForm() {
     car: p.car, time: p.time, laps: p.laps, fastestLap: p.fastestLap, note: p.note };
   for (const [k, val] of Object.entries(v)) if (form[k] && val != null) form[k].value = val;
   if (!v.ppLimit && v.event) form.event.dispatchEvent(new Event('change'));
+  // 車名：對得到清單就換成標準名稱；編輯清單外的舊紀錄時預設勾「清單外」，可以不改直接存
+  form.carCustom.checked = !!(item.edit && p.car && !carOf(p.car));
+  updateCarHint(true);
 
   const img = item.image;
   $('#formImg').src = img?.full || '';
@@ -717,6 +759,8 @@ $('#panelAdd').onclick = () => openManual(S.panelTrack);
 form.onsubmit = async e => {
   e.preventDefault();
   const item = S.formCur, fd = Object.fromEntries(new FormData(form));
+  const car = carForSave();
+  if (!car) { toast('車名對不到官方清單：請從下方候選點一台，或勾選「清單沒有這台」', 5000); form.car.focus(); return; }
   const btn = form.querySelector('[type=submit]'); btn.disabled = true;
   try {
     const img = item.image;
@@ -730,7 +774,7 @@ form.onsubmit = async e => {
       ...base,
       id: base.id || uid(), createdAt: base.createdAt || new Date().toISOString(),
       trackId: fd.trackId, layout: fd.layout || '', event: fd.event.trim(), ppLimit: fd.ppLimit,
-      position: fd.position, totalCars: fd.totalCars, raceDate: fd.raceDate, car: fd.car.trim(),
+      position: fd.position, totalCars: fd.totalCars, raceDate: fd.raceDate, car,
       time: fd.time.trim(), laps: fd.laps, fastestLap: fd.fastestLap.trim(), note: fd.note.trim(),
       imageId, imageHash: img?.hash || base.imageHash || '',
       source: item.edit ? base.source : item.source,
@@ -820,16 +864,18 @@ $('#formImg').onclick = e => e.target.src && showLightbox(e.target.src);
 document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('.modal').classList.add('hidden'));
 $('#panelClose').onclick = closePanel;
 $('#btnBack').onclick = showWorld;
-$('#btnHome').onclick = showWorld;
+$('#btnHome').onclick = showHome;
+$('#goWorld').onclick = showWorld;
+$('#goGarage').onclick = () => showGarage();
 $('#fileInput').onchange = e => { handleFiles(e.target.files).finally(() => { e.target.value = ''; }); };
 
 window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => { e.preventDefault(); handleFiles([...e.dataTransfer.files].filter(f => f.type.startsWith('image/'))); });
-window.addEventListener('resize', () => { clearTimeout(window._rz); window._rz = setTimeout(() => { placeNav(); S.screen === 'world' ? renderGlobe() : renderMap(); }, 150); });
+window.addEventListener('resize', () => { clearTimeout(window._rz); window._rz = setTimeout(() => { placeNav(); if (S.screen === 'world') renderGlobe(); else if (S.screen === 'region') renderMap(); else if (S.screen === 'home') renderHomeGlobe(); }, 150); });
 
 function refreshAll() {
   renderTopbar();
-  if (S.screen === 'world') renderWorld(); else renderRegion();
+  if (S.screen === 'home') renderHome(); else if (S.screen === 'world') renderWorld(); else if (S.screen === 'garage') renderGarage(); else renderRegion();
   if (S.panelTrack) renderPanel();
 }
 
@@ -838,8 +884,9 @@ async function boot() {
   try { await Api.load(); }
   catch (e) { toast('讀取資料失敗：' + e.message + '（請檢查 ⚙ 設定）', 8000); }
   if (!world) { try { await loadWorld(); } catch (e) { toast('地圖載入失敗，請檢查網路', 6000); } }
-  if (S.screen === 'world') showWorld(); else renderRegion();
+  if (S.screen === 'home') showHome(); else if (S.screen === 'world') showWorld(); else if (S.screen === 'garage') showGarage(); else renderRegion();
   if (!S.settings.playerName) toast('第一次使用：請先到 ⚙ 設定填入遊戲內的玩家名稱', 6000);
 }
 setInterval(tickClock, 30000);
+bindCarField(); bindGarage(); // garage.js
 boot();
