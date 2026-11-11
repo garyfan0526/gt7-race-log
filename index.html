@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GT7 戰績">
+<meta name="theme-color" content="#0b0c0f">
+<title>GT7 賽事戰績簿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── 頂列（仿遊戲狀態列） ── -->
+<header class="topbar">
+  <div class="tb-logo" id="btnHome" title="回世界賽道">戰</div>
+  <div class="tb-cell tb-title"><small id="tbCrumb">戰績簿</small><span id="tbPlace">世界賽道</span></div>
+  <div class="tb-cell"><small>賽事紀錄</small><span class="num" id="tbRecords">0</span></div>
+  <div class="tb-cell"><small>拿過第一</small><span><span class="num gold" id="tbGold">0</span><span class="num dim"> / <span id="tbTotal">0</span></span> <em>地點</em></span></div>
+  <div class="tb-cell tb-car"><small>最常用車</small><span id="tbCar">—</span></div>
+  <div class="tb-actions">
+    <label class="btn primary" title="上傳結算截圖">📷 截圖<input type="file" id="fileInput" accept="image/*" multiple hidden></label>
+    <button class="btn" id="btnManual">✍ 手動</button>
+    <button class="btn hidden" id="btnQueue">⏳ <span id="queueCount">0</span></button>
+    <button class="btn icon" id="btnSettings" title="設定">⚙</button>
+  </div>
+  <div class="tb-cell tb-clock"><span class="num" id="tbTime">--:--</span><small id="tbDate"></small></div>
+</header>
+
+<div class="banner hidden" id="banner"></div>
+
+<!-- ── 世界賽道（選區） ── -->
+<section class="screen" id="worldScreen">
+  <svg id="globe"></svg>
+  <h1 class="world-title">世界賽道</h1>
+  <div class="dials" id="dials"></div>
+  <div class="avail">
+    <div class="avail-title">可供選擇的賽車場</div>
+    <div class="avail-list" id="availList"></div>
+  </div>
+  <div class="recent">
+    <div class="recent-tag">最近紀錄</div>
+    <div class="recent-strip" id="recentStrip"></div>
+  </div>
+</section>
+
+<!-- ── 地區地圖 ── -->
+<section class="screen hidden" id="regionScreen">
+  <svg id="map"></svg>
+  <div id="labels"></div>
+  <div class="region-nav">
+    <button class="btn back" id="btnBack">◀ 世界賽道</button>
+    <div class="views" id="viewTabs"></div>
+  </div>
+  <div class="legend">
+    <span><i class="dot gold"></i>拿過第一</span>
+    <span><i class="dot silver"></i>上過頒獎台</span>
+    <span><i class="dot gray"></i>跑過</span>
+    <span><i class="dot none"></i>還沒跑</span>
+  </div>
+  <div class="events" id="eventStrip">
+    <div class="events-title"><span class="flagico">🏁</span> 本區賽事紀錄</div>
+    <div class="events-grid" id="eventGrid"></div>
+  </div>
+  <div class="placing-hint hidden" id="placingHint">在地圖上點一下，放置新賽道 <button class="btn small" id="cancelPlace">取消</button></div>
+</section>
+
+<!-- ── 賽道面板 ── -->
+<aside class="panel" id="panel">
+  <div class="panel-head">
+    <div class="panel-flag" id="panelFlag"></div>
+    <div class="panel-titles">
+      <div class="panel-country" id="panelCountry"></div>
+      <h2 id="panelTitle"></h2>
+      <div class="panel-en" id="panelEn"></div>
+    </div>
+    <button class="btn icon" id="panelClose">✕</button>
+  </div>
+  <div class="panel-actions"><button class="btn small" id="panelAdd">＋ 手動新增這條賽道的紀錄</button></div>
+  <div class="panel-body" id="panelBody"></div>
+</aside>
+
+<!-- ── 紀錄表單（AI 確認／手動輸入共用） ── -->
+<div class="modal hidden" id="formModal">
+  <div class="modal-box wide">
+    <div class="modal-head">
+      <h3 id="formTitle">新增紀錄</h3>
+      <span class="badge" id="formBadge"></span>
+      <button class="btn icon" data-close>✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-img" id="formImgWrap">
+        <img id="formImg" alt="">
+        <label class="btn small">附加截圖<input type="file" id="formImgInput" accept="image/*" hidden></label>
+      </div>
+      <form id="recForm" autocomplete="off">
+        <label>賽道<select name="trackId" required></select></label>
+        <label>配置<select name="layout"></select></label>
+        <div class="row">
+          <label class="grow">賽事名稱<input name="event" list="dlEvents" placeholder="例如 World Touring Car 800"></label>
+          <label>PP 上限<input name="ppLimit" type="number" min="0" step="1" placeholder="不限留空"></label>
+        </div>
+        <div class="row">
+          <label>名次<input name="position" type="number" min="1" max="40" required></label>
+          <label>參賽數<input name="totalCars" type="number" min="1" max="40"></label>
+          <label>日期<input name="raceDate" type="date"></label>
+        </div>
+        <label>車輛<input name="car" list="dlCars" required placeholder="例如 McLaren F1 '94"></label>
+        <div class="row">
+          <label class="grow">成績（第一名填總時間，其他填差距）<input name="time" placeholder="1:01:36.266 / +47.427 / 1 Lap"></label>
+          <label>圈數<input name="laps" type="number" min="1"></label>
+        </div>
+        <label>最速圈<input name="fastestLap" placeholder="例如 I. Fraga 2:14.130"></label>
+        <label>備註（調校、心得）<textarea name="note" rows="2"></textarea></label>
+        <div class="form-foot">
+          <span class="muted" id="formProgress"></span>
+          <button type="button" class="btn" id="formSkip">略過</button>
+          <button type="submit" class="btn primary">💾 儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── 待確認清單 ── -->
+<div class="modal hidden" id="queueModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>待確認的截圖</h3><button class="btn icon" data-close>✕</button></div>
+    <p class="muted">Gemini 額度用完時，截圖會先排在這裡，每小時自動重試辨識。辨識好的點一下確認即可；也可以直接手動填。</p>
+    <div id="queueList"></div>
+    <div class="form-foot"><button class="btn" id="btnRetryQueue">🔄 立即重試辨識</button></div>
+  </div>
+</div>
+
+<!-- ── 設定 ── -->
+<div class="modal hidden" id="settingsModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>設定</h3><button class="btn icon" data-close>✕</button></div>
+    <form id="settingsForm" autocomplete="off">
+      <label>遊戲內玩家名稱（AI 用來找你那一列）<input name="playerName" placeholder="例如 Gary醬~嗨"></label>
+      <label>後端網址（Apps Script 網頁應用程式 URL，留空＝本機模式）<input name="apiUrl" placeholder="https://script.google.com/macros/s/.../exec"></label>
+      <label>通關密碼<input name="pass" type="password"></label>
+      <div class="form-foot"><button type="submit" class="btn primary">儲存設定</button></div>
+    </form>
+    <hr>
+    <h4>新增賽道（遊戲改版有新賽道時用）</h4>
+    <form id="trackForm" autocomplete="off">
+      <div class="row">
+        <label class="grow">中文名稱（遊戲內）<input name="zh" required></label>
+        <label class="grow">英文名稱<input name="en"></label>
+      </div>
+      <div class="row">
+        <label>地區<select name="region"></select></label>
+        <label>國家<input name="country" placeholder="日本"></label>
+        <label>國旗代碼<input name="cc" placeholder="jp" maxlength="2"></label>
+      </div>
+      <label>配置（中文，用逗號分隔；沒有就留空）<input name="layouts" placeholder="XX賽道, XX賽道（反向）"></label>
+      <div class="form-foot"><button type="submit" class="btn">下一步：到地圖上點位置</button></div>
+    </form>
+    <hr>
+    <div class="form-foot"><button class="btn small" id="btnExport">⬇ 匯出 JSON 備份</button></div>
+  </div>
+</div>
+
+<datalist id="dlEvents"></datalist>
+<datalist id="dlCars"></datalist>
+
+<div class="toast hidden" id="toast"></div>
+<div class="lightbox hidden" id="lightbox"><img alt=""></div>
+
+<footer class="signature">Generated by Gary Fan</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<script src="tracks.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

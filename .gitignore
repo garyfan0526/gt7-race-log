@@ -1,0 +1,4 @@
+_test*
+*.log
+.DS_Store
+*.txt
