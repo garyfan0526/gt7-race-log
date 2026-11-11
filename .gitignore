@@ -3,3 +3,4 @@ _test*
 .DS_Store
 *.txt
 _research/
+_preview/

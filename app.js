@@ -287,6 +287,8 @@ function renderMap() {
   svg.call(zoomer).call(zoomer.transform, d3.zoomIdentity).on('dblclick.zoom', null);
 
   labelsEl.innerHTML = '';
+  // 小螢幕（手機直放或橫放）用精簡卡片：只留一行「名稱＋🏆」
+  labelsEl.classList.toggle('compact', W < 900 || H < 560);
   for (const t of viewTracks()) {
     const st = trackStatus(t.id);
     const el = document.createElement('div');
@@ -294,7 +296,7 @@ function renderMap() {
     el.dataset.id = t.id;
     el.innerHTML = `<div class="tl-box">${st.n ? trophy(st.best) : '<div class="new"></div>'}</div>
       <div class="tl-txt"><div class="tl-cty">${flag(t.cc)}${esc(t.country || '')}${st.evTotal ? `<span class="tl-cnt ${st.evWon ? '' : 'dim'}">🏆${st.evWon}/${st.evTotal}</span>` : ''}</div>
-      <div class="tl-nm">${esc(t.zh)}</div></div>`;
+      <div class="tl-nm">${esc(t.zh)}${st.evTotal ? `<span class="tl-cnt2 ${st.evWon ? '' : 'dim'}">🏆${st.evWon}/${st.evTotal}</span>` : ''}</div></div>`;
     el.onclick = () => openPanel(t.id);
     labelsEl.appendChild(el);
   }
@@ -309,7 +311,7 @@ function schedulePins() {
 }
 
 // full=true：重新排版標籤（放開滑鼠/手指後）；false：拖動中只依上次的相對位置平移，很省效能
-let labelSize = {}, labelOff = {};
+let labelSize = {}, labelOff = {}, labelShown = null, compactTop = 52, compactBottom = 4;
 function placePins(full) {
   const wrap = $('#regionScreen'), W = wrap.clientWidth, H = wrap.clientHeight;
   const items = viewTracks().map(t => {
@@ -320,19 +322,28 @@ function placePins(full) {
     return { t, px: x, py: y, el, w: sz.w, h: sz.h, st: trackStatus(t.id) };
   }).filter(Boolean);
   const visible = items.filter(it => it.px > -10 && it.px < W + 10 && it.py > -10 && it.py < H + 10);
-  items.forEach(it => { it.el.style.display = visible.includes(it) ? '' : 'none'; });
-  if (full || visible.some(it => !labelOff[it.t.id])) {
+  if (full || !labelShown || visible.some(it => !labelOff[it.t.id])) {
     layoutLabels(visible, W, H);
     visible.forEach(it => { labelOff[it.t.id] = [it.lx - it.px, it.ly - it.py]; });
+    // 只有手機精簡模式才挑選/隱藏名稱；電腦版全部顯示（維持原本行為）
+    labelShown = labelsEl.classList.contains('compact') ? pickLabels(visible, W) : new Set(visible.map(it => it.t.id));
   } else {
     visible.forEach(it => { const o = labelOff[it.t.id]; it.lx = it.px + o[0]; it.ly = it.py + o[1]; });
   }
+  // 放不下的名稱先隱藏（點還在、一樣能點），放大地圖後會重新挑
+  const withLabel = visible.filter(it => labelShown.has(it.t.id));
+  items.forEach(it => { it.el.style.display = withLabel.includes(it) ? '' : 'none'; });
+  const hidden = visible.length - withLabel.length;
+  const note = $('#mapNote');
+  note.textContent = hidden ? `還有 ${hidden} 個賽道名稱放不下：點紅點、或用兩指放大地圖` : '';
+  note.classList.toggle('hidden', !hidden);
 
   const pins = gPins.selectAll('g.pin').data(visible, d => d.t.id).join(enter => {
     const g = enter.append('g').attr('class', 'pin');
     g.append('circle').attr('class', 'sel-ring').attr('r', 15);
     g.append('circle').attr('class', 'pin-glow').attr('r', 13);
     g.append('circle').attr('class', 'pin-core').attr('r', 4.5);
+    g.append('circle').attr('class', 'pin-hit').attr('r', 16); // 加大觸控範圍
     return g;
   });
   pins.select('.pin-glow').attr('fill', d => `url(#gl-${d.st.cls})`);
@@ -340,16 +351,33 @@ function placePins(full) {
     .on('click', (e, d) => { e.stopPropagation(); openPanel(d.t.id); });
   pins.select('.sel-ring').style('display', d => d.t.id === S.panelTrack ? '' : 'none');
 
-  gLead.selectAll('line').data(visible, d => d.t.id).join('line').attr('class', 'leader')
+  gLead.selectAll('line').data(withLabel, d => d.t.id).join('line').attr('class', 'leader')
     .attr('x1', d => d.px).attr('y1', d => d.py)
     .attr('x2', d => Math.max(d.lx, Math.min(d.px, d.lx + d.w)))
     .attr('y2', d => Math.max(d.ly, Math.min(d.py, d.ly + d.h)));
 
-  for (const it of visible) { it.el.style.left = it.lx + 'px'; it.el.style.top = it.ly + 'px'; }
+  for (const it of withLabel) { it.el.style.left = it.lx + 'px'; it.el.style.top = it.ly + 'px'; }
+}
+
+// 挑出要顯示名稱的賽道：有紀錄的優先、再來是選中的；跟已顯示的卡片重疊或蓋到點就先不顯示
+function pickLabels(items, W) {
+  const pad = 3, prio = it => (it.t.id === S.panelTrack ? 0 : it.st.n ? 1 : 2);
+  const order = [...items].sort((a, b) => prio(a) - prio(b) || a.py - b.py);
+  const placed = [], shown = new Set();
+  for (const it of order) {
+    const r = { x0: it.lx - pad, y0: it.ly - pad, x1: it.lx + it.w + pad, y1: it.ly + it.h + pad };
+    const hitLabel = placed.some(p => r.x0 < p.x1 && p.x0 < r.x1 && r.y0 < p.y1 && p.y0 < r.y1);
+    // 「蓋到別的點」只在手機精簡模式才算；電腦版維持原樣，只避免卡片互相重疊
+    const hitPin = labelsEl.classList.contains('compact') && items.some(p => p !== it && p.px > r.x0 && p.px < r.x1 && p.py > r.y0 && p.py < r.y1);
+    if (!hitLabel && (!hitPin || prio(it) === 0)) { placed.push(r); shown.add(it.t.id); }
+  }
+  return shown;
 }
 
 // 標籤排斥：互不重疊、不蓋住賽道點，盡量靠近自己的點
 function layoutLabels(items, W, H) {
+  const compact = labelsEl.classList.contains('compact');
+  compactTop = compact ? 40 : 52; compactBottom = compact ? 38 : 4; // 小螢幕底部留給提示條
   const gapX = 8, gapY = 6, R = 12, OFF = 26;
   if (!items.length) return;
   // 從賽道群中心往外推：每個標籤放在自己的點「遠離中心」的那一側
@@ -385,7 +413,7 @@ function layoutLabels(items, W, H) {
       }
       if (k < 300) { it.lx += (it.tx - it.lx) * 0.01; it.ly += (it.ty - it.ly) * 0.01; }
       it.lx = Math.max(4, Math.min(W - it.w - 4, it.lx));
-      it.ly = Math.max(52, Math.min(H - it.h - 4, it.ly));
+      it.ly = Math.max(compactTop, Math.min(H - it.h - compactBottom, it.ly));
     }
   }
 }

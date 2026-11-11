@@ -270,3 +270,23 @@ h4 { margin: 0 0 10px; }
 .others-h { margin: 6px 0 8px; font-size: 13px; color: var(--muted); font-weight: 500; }
 .tlabel .tl-cnt.dim { color: #8b93a3; }
 @media (max-width: 760px) { .ev-grid { gap: 8px; } .evcard .ec-name { font-size: 15px; } }
+
+/* ───────── 小螢幕：精簡賽道卡＋放不下就藏名稱 ───────── */
+#map .pin-hit { fill: transparent; }
+.tlabel .tl-cnt2 { display: none; }
+#labels.compact .tlabel .tl-cty { display: none; }
+#labels.compact .tlabel .tl-cnt2 { display: inline; margin-left: 5px; font-family: var(--en); font-size: 11px; font-weight: 600; color: var(--gold); }
+#labels.compact .tlabel .tl-cnt2.dim { color: #8b93a3; }
+#labels.compact .tlabel .tl-box { width: 22px; }
+#labels.compact .tlabel .tl-box .trophy { width: 18px; height: 18px; font-size: 11px; }
+#labels.compact .tlabel .tl-box .new { width: 6px; height: 6px; }
+#labels.compact .tlabel .tl-txt { padding: 3px 7px; }
+#labels.compact .tlabel .tl-nm { font-size: 12px; margin: 0; }
+.map-note { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); background: rgba(12,13,16,.85); color: #dfe3ea;
+  font-size: 12px; padding: 5px 12px; border-radius: 999px; white-space: nowrap; pointer-events: none; z-index: 3; }
+@media (max-height: 560px) {
+  .legend { display: none; }
+  .region-nav { top: 6px; left: 6px; }
+  .region-nav .btn, .views button { padding: 4px 9px; font-size: 12px; }
+  .events { display: none; }
+}
