@@ -480,3 +480,6 @@ html.standalone body { padding-bottom: env(safe-area-inset-bottom); }
 @media (display-mode: standalone) { body { padding-bottom: env(safe-area-inset-bottom); } }
 /* 署名放進底部深色區、靠右（避開圓角與中間的指示條） */
 html.standalone .signature { bottom: max(3px, calc(env(safe-area-inset-bottom) / 2 - 6px)); right: calc(env(safe-area-inset-right) + 26px); }
+
+/* 首頁：拿掉「進入」按鈕後保留同樣高度的隱形空白，標題與統計維持原位置 */
+.hc-go.hc-ghost { visibility: hidden; }
