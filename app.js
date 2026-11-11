@@ -15,7 +15,7 @@ const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxQEzO0zwhfiIyv
 const S = {
   settings: JSON.parse(localStorage.getItem(LS_SETTINGS) || JSON.stringify({ apiUrl: DEFAULT_API_URL })),
   records: [], customTracks: [], queue: [],
-  screen: 'world', region: 'europe', view: null, hotRegion: 'europe', panelTrack: null,
+  screen: 'world', region: 'europe', view: null, hotRegion: 'europe', panelTrack: null, panelEvent: null,
   formQueue: [], formCur: null, placing: null,
 };
 
@@ -79,10 +79,25 @@ const viewOf = t => { const r = regionOf(t.region); return (r.views.find(v => in
 
 function trackStatus(id) {
   const rs = S.records.filter(r => r.trackId === id);
-  if (!rs.length) return { cls: 'none', n: 0 };
+  const evs = eventsOf(id);
+  const evWon = evs.filter(e => recsOfEvent(e).some(r => +r.position === 1)).length;
+  if (!rs.length) return { cls: 'none', n: 0, evWon, evTotal: evs.length };
   const best = Math.min(...rs.map(r => +r.position || 99));
-  return { cls: best === 1 ? 'gold' : best <= 3 ? 'silver' : 'gray', n: rs.length, best };
+  return { cls: best === 1 ? 'gold' : best <= 3 ? 'silver' : 'gray', n: rs.length, best, evWon, evTotal: evs.length };
 }
+
+/* ───────── 賽事（每條賽道裡的賽事卡片） ───────── */
+const normEv = s => String(s || '').toLowerCase().replace(/\(gt7\)/g, '').replace(/[^a-z0-9]/g, '');
+const eventsOf = trackId => (typeof EVENTS === 'undefined' ? [] : EVENTS).filter(e => e.t === trackId);
+const evKey = e => `${e.t}|${e.n}|${e.l}`;
+// 紀錄屬於哪一場賽事：賽事名相同；同名有多個配置時再比配置
+function eventOfRec(r) {
+  const c = eventsOf(r.trackId).filter(e => normEv(e.n) === normEv(r.event));
+  if (!c.length) return null;
+  return c.find(e => e.l === r.layout) || (c.length === 1 ? c[0] : null);
+}
+const recsOfEvent = e => S.records.filter(r => r.trackId === e.t && eventOfRec(r) === e);
+const evMeta = e => `${e.pp ? 'PP ' + e.pp : 'PP 不限'} / ${e.len}`;
 const trophy = pos => { const p = +pos; return `<div class="trophy ${p >= 1 && p <= 3 ? 'p' + p : ''}">${esc(pos || '–')}</div>`; };
 
 /* ───────────────────────── 頂列 ───────────────────────── */
@@ -243,18 +258,31 @@ function renderMap() {
   const path = d3.geoPath(projection);
 
   svg.selectAll('*').remove();
+  // 效能：不用 SVG 濾鏡；光暈改用漸層、陸地陰影改成一條位移的深色路徑
   const defs = svg.append('defs');
-  defs.append('filter').attr('id', 'glow').attr('x', '-100%').attr('y', '-100%').attr('width', '300%').attr('height', '300%')
-    .append('feGaussianBlur').attr('stdDeviation', 4);
-  const relief = defs.append('filter').attr('id', 'relief');
-  relief.append('feDropShadow').attr('dx', 0).attr('dy', 2).attr('stdDeviation', 3).attr('flood-color', '#06101f').attr('flood-opacity', .6);
+  for (const [id, c] of [['gl-none', '#ff4242'], ['gl-gold', '#f2c23a'], ['gl-silver', '#d4dbe6'], ['gl-gray', '#7c8496']]) {
+    const g = defs.append('radialGradient').attr('id', id);
+    g.append('stop').attr('offset', 0).attr('stop-color', c).attr('stop-opacity', .75);
+    g.append('stop').attr('offset', 1).attr('stop-color', c).attr('stop-opacity', 0);
+  }
 
-  gLand = svg.append('g').attr('filter', 'url(#relief)');
-  gLand.selectAll('path').data(world.features).join('path').attr('class', 'land').attr('d', path);
+  // 效能：只畫這個子區域附近的國家，並合併成單一路徑
+  const [[x0, y0], [x1, y1]] = v.bounds, pad = 25;
+  const near = world.features.filter(f => {
+    const [[a0, b0], [a1, b1]] = f._b || (f._b = d3.geoBounds(f));
+    if (b1 < y0 - pad || b0 > y1 + pad) return false;
+    if (a0 > a1) return true; // 跨換日線的國家（如俄羅斯）直接保留
+    return !(a1 < x0 - pad || a0 > x1 + pad);
+  });
+  const d = path({ type: 'FeatureCollection', features: near });
+  gLand = svg.append('g');
+  gLand.append('path').attr('class', 'land-shadow').attr('d', d).attr('transform', 'translate(0,3)');
+  gLand.append('path').attr('class', 'land').attr('d', d);
   gLead = svg.append('g'); gPins = svg.append('g');
 
   zoomer = d3.zoom().scaleExtent([1, 14]).translateExtent([[-W, -H], [2 * W, 2 * H]])
-    .on('zoom', e => { transform = e.transform; gLand.attr('transform', transform); schedulePins(); });
+    .on('zoom', e => { transform = e.transform; gLand.attr('transform', transform); schedulePins(); })
+    .on('end', () => placePins(true));
   transform = d3.zoomIdentity;
   svg.call(zoomer).call(zoomer.transform, d3.zoomIdentity).on('dblclick.zoom', null);
 
@@ -265,38 +293,49 @@ function renderMap() {
     el.className = `tlabel ${st.cls}` + (S.panelTrack === t.id ? ' active' : '');
     el.dataset.id = t.id;
     el.innerHTML = `<div class="tl-box">${st.n ? trophy(st.best) : '<div class="new"></div>'}</div>
-      <div class="tl-txt"><div class="tl-cty">${flag(t.cc)}${esc(t.country || '')}${st.n ? `<span class="tl-cnt">${st.n} 筆</span>` : ''}</div>
+      <div class="tl-txt"><div class="tl-cty">${flag(t.cc)}${esc(t.country || '')}${st.evTotal ? `<span class="tl-cnt ${st.evWon ? '' : 'dim'}">🏆${st.evWon}/${st.evTotal}</span>` : ''}</div>
       <div class="tl-nm">${esc(t.zh)}</div></div>`;
     el.onclick = () => openPanel(t.id);
     labelsEl.appendChild(el);
   }
-  placePins();
+  labelSize = {};
+  placePins(true);
 }
 
 function schedulePins() {
   if (rafPending) return;
   rafPending = true;
-  requestAnimationFrame(() => { rafPending = false; placePins(); });
+  requestAnimationFrame(() => { rafPending = false; placePins(false); });
 }
 
-function placePins() {
+// full=true：重新排版標籤（放開滑鼠/手指後）；false：拖動中只依上次的相對位置平移，很省效能
+let labelSize = {}, labelOff = {};
+function placePins(full) {
   const wrap = $('#regionScreen'), W = wrap.clientWidth, H = wrap.clientHeight;
   const items = viewTracks().map(t => {
-    const [x, y] = transform.apply(projection([t.lon, t.lat]));
     const el = labelsEl.querySelector(`[data-id="${CSS.escape(t.id)}"]`);
-    return { t, px: x, py: y, el, w: el.offsetWidth, h: el.offsetHeight, st: trackStatus(t.id) };
-  });
+    if (!el) return null; // 標籤還沒建好（初始化中）
+    const [x, y] = transform.apply(projection([t.lon, t.lat]));
+    const sz = labelSize[t.id] || (labelSize[t.id] = { w: el.offsetWidth, h: el.offsetHeight });
+    return { t, px: x, py: y, el, w: sz.w, h: sz.h, st: trackStatus(t.id) };
+  }).filter(Boolean);
   const visible = items.filter(it => it.px > -10 && it.px < W + 10 && it.py > -10 && it.py < H + 10);
   items.forEach(it => { it.el.style.display = visible.includes(it) ? '' : 'none'; });
-  layoutLabels(visible, W, H);
+  if (full || visible.some(it => !labelOff[it.t.id])) {
+    layoutLabels(visible, W, H);
+    visible.forEach(it => { labelOff[it.t.id] = [it.lx - it.px, it.ly - it.py]; });
+  } else {
+    visible.forEach(it => { const o = labelOff[it.t.id]; it.lx = it.px + o[0]; it.ly = it.py + o[1]; });
+  }
 
   const pins = gPins.selectAll('g.pin').data(visible, d => d.t.id).join(enter => {
     const g = enter.append('g').attr('class', 'pin');
     g.append('circle').attr('class', 'sel-ring').attr('r', 15);
-    g.append('circle').attr('class', 'pin-glow').attr('r', 10).attr('filter', 'url(#glow)');
+    g.append('circle').attr('class', 'pin-glow').attr('r', 13);
     g.append('circle').attr('class', 'pin-core').attr('r', 4.5);
     return g;
   });
+  pins.select('.pin-glow').attr('fill', d => `url(#gl-${d.st.cls})`);
   pins.attr('class', d => `pin ${d.st.cls}`).attr('transform', d => `translate(${d.px},${d.py})`)
     .on('click', (e, d) => { e.stopPropagation(); openPanel(d.t.id); });
   pins.select('.sel-ring').style('display', d => d.t.id === S.panelTrack ? '' : 'none');
@@ -373,13 +412,14 @@ function renderEvents() {
     const t = trackById(r.trackId);
     return `<div class="ev-row" data-track="${esc(r.trackId)}"><div class="ev-name">${esc(r.event || r.layout || t?.zh)}
       <small>${esc(r.layout || t?.zh || '')} · ${esc(r.car)}</small></div>
-      <div class="ev-pp">${r.ppLimit ? 'PP ' + esc(r.ppLimit) : 'PP No Limit'}</div>${trophy(r.position)}</div>`;
+      <div class="ev-pp">${(() => { const pp = r.ppLimit || eventOfRec(r)?.pp; return pp ? 'PP ' + esc(pp) : 'PP 不限'; })()}</div>${trophy(r.position)}</div>`;
   }).join('');
 }
 $('#eventGrid').addEventListener('click', e => { const r = e.target.closest('.ev-row'); if (r) gotoTrack(r.dataset.track); });
 
 /* ───────────────────────── 賽道面板 ───────────────────────── */
 function openPanel(id) {
+  if (S.panelTrack !== id) S.panelEvent = null;
   S.panelTrack = id;
   renderPanel();
   $('#panel').classList.add('open');
@@ -401,48 +441,80 @@ function renderPanel() {
   $('#panelFlag').innerHTML = flag(t.cc);
   $('#panelTitle').textContent = t.zh;
   $('#panelEn').textContent = t.en || '';
-  $('#panelCountry').textContent = `${t.country || ''}　·　${t.layouts.length} 種配置`;
-  const recs = S.records.filter(r => r.trackId === t.id);
+  const st = trackStatus(t.id);
+  $('#panelCountry').textContent = `${t.country || ''}　·　${st.evTotal} 場賽事，拿過第一 ${st.evWon} 場`;
   const body = $('#panelBody');
-  if (!recs.length) { body.innerHTML = '<div class="empty">這條賽道還沒有紀錄</div>'; return; }
+  const evs = eventsOf(t.id);
 
-  const groups = {};
-  for (const r of recs) (groups[`${r.event || ''}|${r.layout || ''}`] ||= []).push(r);
-  const list = Object.values(groups).map(rs => rs.sort(posCmp)).sort((a, b) => posCmp(a[0], b[0]));
+  // ── 單一賽事明細 ──
+  const cur = S.panelEvent && evs.find(e => evKey(e) === S.panelEvent);
+  if (cur) {
+    const rs = recsOfEvent(cur).sort(posCmp);
+    body.innerHTML = `<button class="btn small" data-back>◀ 全部賽事</button>
+      <div class="ev-detail">${evCard(cur, true)}</div>
+      <button class="btn primary ev-add" data-addev="${esc(evKey(cur))}">＋ 記錄這場</button>
+      ${rs.length ? `<div class="group">${rs.map((r, i) => recRow(r, i === 0)).join('')}</div>` : '<div class="empty">這場還沒有紀錄</div>'}`;
+    return;
+  }
 
-  body.innerHTML = list.map(rs => {
-    const r0 = rs[0];
-    return `<div class="group">
-      <div class="group-head"><div><div class="ev">${esc(r0.event || '（未填賽事）')}</div><div class="lo">${esc(r0.layout || '')}</div></div>
-        <div class="pp">${r0.ppLimit ? 'PP ' + esc(r0.ppLimit) : ''}</div></div>
-      ${rs.map((r, i) => {
-        const url = imgUrl(r);
-        return `<div class="rec ${i === 0 ? 'best' : ''}">
-          ${trophy(r.position)}
-          ${url ? `<img class="thumb" src="${esc(url)}" data-full="${esc(url)}" alt="" loading="lazy">` : ''}
-          <div class="info">
-            <div class="car">${esc(r.car)}<span class="src">${r.source === 'ai' ? 'AI' : '手動'}</span></div>
-            <div class="meta">${[r.time, r.totalCars ? `${r.position}/${r.totalCars}` : '', r.laps ? r.laps + ' 圈' : '', r.raceDate].filter(Boolean).map(esc).join('　·　')}</div>
-            ${r.fastestLap ? `<div class="meta">最速圈 ${esc(r.fastestLap)}</div>` : ''}
-            ${r.note ? `<div class="note">${esc(r.note)}</div>` : ''}
-          </div>
-          <div class="ops"><button data-edit="${esc(r.id)}">編輯</button><button data-del="${esc(r.id)}">刪除</button></div>
-        </div>`;
-      }).join('')}
-    </div>`;
-  }).join('');
+  // ── 賽事卡片（像遊戲裡點進賽道看到的那排） ──
+  const order = c => c.best ? (c.best.position == 1 ? 0 : 1) : 2;
+  const cards = evs.map(e => ({ e, best: recsOfEvent(e).sort(posCmp)[0] }))
+    .sort((a, b) => order(a) - order(b) || a.e.n.localeCompare(b.e.n));
+  const others = S.records.filter(r => r.trackId === t.id && !eventOfRec(r)).sort(posCmp);
+  body.innerHTML = (cards.length ? `<div class="ev-grid">${cards.map(c => evCard(c.e, false, c.best)).join('')}</div>` : '')
+    + (others.length ? `<h4 class="others-h">其他紀錄（對不到賽事清單）</h4><div class="group">${others.map(r => recRow(r, false, true)).join('')}</div>` : '')
+    + (!cards.length && !others.length ? '<div class="empty">這條賽道還沒有紀錄</div>' : '');
+}
+
+function evCard(e, big, best) {
+  if (best === undefined) best = recsOfEvent(e).sort(posCmp)[0];
+  const p = best ? +best.position : 0;
+  return `<div class="evcard ${p === 1 ? 'won' : best ? 'tried' : 'new'} ${big ? 'big' : ''}" data-ev="${esc(evKey(e))}">
+    <div class="ec-top">${esc(evMeta(e))}</div>
+    <div class="ec-name">${esc(e.n)}</div>
+    <div class="ec-lo">${esc(e.l)}</div>
+    ${e.cars || e.tyres ? `<div class="ec-rule">${esc([e.cars, e.tyres].filter(Boolean).join(' · '))}</div>` : ''}
+    <div class="ec-res">${best ? `${trophy(best.position)}<div class="ec-car"><div>${esc(best.car)}</div><small>${esc(best.time || '')}</small></div>`
+      : '<span class="ec-none">尚未紀錄</span>'}</div>
+  </div>`;
+}
+
+function recRow(r, isBest, showEvent) {
+  const url = imgUrl(r);
+  return `<div class="rec ${isBest ? 'best' : ''}">
+    ${trophy(r.position)}
+    ${url ? `<img class="thumb" src="${esc(url)}" data-full="${esc(url)}" alt="" loading="lazy">` : ''}
+    <div class="info">
+      <div class="car">${esc(r.car)}<span class="src">${r.source === 'ai' ? 'AI' : '手動'}</span></div>
+      ${showEvent ? `<div class="meta">${esc([r.event || '（未填賽事）', r.layout].filter(Boolean).join(' · '))}</div>` : ''}
+      <div class="meta">${[r.time, r.totalCars ? `${r.position}/${r.totalCars}` : '', r.laps ? r.laps + ' 圈' : '', r.raceDate].filter(Boolean).map(esc).join('　·　')}</div>
+      ${r.fastestLap ? `<div class="meta">最速圈 ${esc(r.fastestLap)}</div>` : ''}
+      ${r.note ? `<div class="note">${esc(r.note)}</div>` : ''}
+    </div>
+    <div class="ops"><button data-edit="${esc(r.id)}">編輯</button><button data-del="${esc(r.id)}">刪除</button></div>
+  </div>`;
 }
 
 $('#panelBody').addEventListener('click', async e => {
   const t = e.target;
   if (t.dataset.full) return showLightbox(t.dataset.full);
+  if (t.closest('[data-back]')) { S.panelEvent = null; return renderPanel(); }
+  const add = t.closest('[data-addev]');
+  if (add) {
+    const ev = EVENTS.find(x => evKey(x) === add.dataset.addev);
+    S.formQueue = [{ source: 'manual', allowAttach: true, prefill: { trackId: ev.t, layout: ev.l, event: ev.n, ppLimit: ev.pp || '', laps: ev.laps || '' } }];
+    formTotal = 0; return openNextForm();
+  }
+  const card = t.closest('.evcard:not(.big)');
+  if (card) { S.panelEvent = card.dataset.ev; return renderPanel(); }
   if (t.dataset.edit) {
     const r = S.records.find(x => x.id === t.dataset.edit);
     S.formQueue = [{ edit: r, source: r.source, image: r.imageId || r.imageData ? { full: imgUrl(r), imageId: r.imageId, thumb: r.imageData, hash: r.imageHash } : null }];
     formTotal = 0; return openNextForm();
   }
   if (t.dataset.del) {
-    if (!confirm('確定刪除這筆紀錄？')) return;
+    if (!confirm('確定刪除這筆紀錄？（截圖也會一起丟進雲端硬碟垃圾桶，30 天內可還原）')) return;
     try { await Api.deleteRecord(t.dataset.del); refreshAll(); toast('已刪除'); }
     catch (err) { toast('刪除失敗：' + err.message, 5000); }
   }
@@ -478,7 +550,8 @@ async function prepImage(file) {
   const full = toJpeg(img, 1600, 0.85);
   return { hash, full, thumb: toJpeg(img, 720, 0.6), data: full.split(',')[1], mime: 'image/jpeg' };
 }
-const aiTrackContext = () => allTracks().map(t => ({ id: t.id, zh: t.zh, en: t.en || '', layouts: t.layouts }));
+const aiTrackContext = () => allTracks().map(t => ({ id: t.id, zh: t.zh, en: t.en || '', layouts: t.layouts,
+  events: eventsOf(t.id).map(e => [e.n, e.l, e.laps || '']) }));
 
 async function handleFiles(files) {
   files = [...files]; if (!files.length) return;
@@ -534,12 +607,25 @@ function fillLayouts(keep) {
 function fillDatalists() {
   const uniq = arr => [...new Set(arr.filter(Boolean))].sort();
   $('#dlCars').innerHTML = uniq(S.records.map(r => r.car)).map(v => `<option value="${esc(v)}">`).join('');
-  $('#dlEvents').innerHTML = uniq(S.records.map(r => r.event)).map(v => `<option value="${esc(v)}">`).join('');
+  fillEventList();
 }
-form.trackId.addEventListener('change', () => fillLayouts());
+// 賽事名稱的選項：先列這條賽道的賽事（含配置與圈數提示），再列其他用過的名稱
+function fillEventList() {
+  const evs = eventsOf(form.trackId.value);
+  const used = [...new Set(S.records.map(r => r.event).filter(Boolean))].filter(n => !evs.some(e => e.n === n));
+  $('#dlEvents').innerHTML = evs.map(e => `<option value="${esc(e.n)}" label="${esc(e.l + ' · ' + evMeta(e))}">`).join('')
+    + used.map(v => `<option value="${esc(v)}">`).join('');
+}
+form.trackId.addEventListener('change', () => { fillLayouts(); fillEventList(); });
+// 選了賽事 → 自動帶入配置、PP 上限、圈數（同名賽事在這條賽道有多個配置時，以目前選的配置為準）
 form.event.addEventListener('change', () => {
-  const m = form.event.value.match(/(\d{3,4})\s*$/);
-  if (m && !form.ppLimit.value) form.ppLimit.value = m[1];
+  const c = eventsOf(form.trackId.value).filter(e => normEv(e.n) === normEv(form.event.value));
+  const e = c.find(x => x.l === form.layout.value) || c[0];
+  if (!e) return;
+  form.event.value = e.n;
+  fillLayouts(e.l);
+  form.ppLimit.value = e.pp || '';
+  if (e.laps && !form.laps.value) form.laps.value = e.laps;
 });
 
 let formTotal = 0;
@@ -554,7 +640,7 @@ function openNextForm() {
   let trackId = p.trackId || item.trackId || '';
   if (trackId && !trackById(trackId)) trackId = '';
   form.trackId.value = trackId;
-  fillLayouts(p.layout || '');
+  fillLayouts(p.layout || ''); fillEventList();
   const v = { event: p.event, ppLimit: p.ppLimit, position: p.position, totalCars: p.totalCars, raceDate: p.raceDate || today(),
     car: p.car, time: p.time, laps: p.laps, fastestLap: p.fastestLap, note: p.note };
   for (const [k, val] of Object.entries(v)) if (form[k] && val != null) form[k].value = val;

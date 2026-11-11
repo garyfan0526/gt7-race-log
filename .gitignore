@@ -2,3 +2,4 @@ _test*
 *.log
 .DS_Store
 *.txt
+_research/

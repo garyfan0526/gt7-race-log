@@ -88,7 +88,17 @@ const ACTIONS = {
     return { record: rec };
   },
 
-  delete(req) { withLock_(() => deleteRow_(SHEET_REC, req.id)); return {}; },
+  delete(req) {
+    const all = readAll_(SHEET_REC, REC_COLS);
+    const rec = all.find(r => r.id === req.id);
+    withLock_(() => deleteRow_(SHEET_REC, req.id));
+    // 截圖一起丟進雲端硬碟垃圾桶（30 天內可還原）；其他紀錄還在用同一張就保留
+    let trashed = false;
+    if (rec && rec.imageId && !all.some(r => r.id !== req.id && r.imageId === rec.imageId)) {
+      try { DriveApp.getFileById(rec.imageId).setTrashed(true); trashed = true; } catch (e) { /* 檔案已不存在 */ }
+    }
+    return { trashed };
+  },
 
   addTrack(req) {
     const t = Object.assign({}, req.track);
@@ -148,7 +158,8 @@ function recognize_(b64, mime, ctx) {
   if (!key) throw new Error('後端還沒設定 GEMINI_API_KEY');
   const trackList = (ctx.tracks || []).map(t => {
     const lays = (t.layouts || []).map(l => Array.isArray(l) ? (l[1] ? `${l[0]}（${l[1]}）` : l[0]) : l).join(' / ');
-    return `- ${t.id}: ${t.zh}${t.en ? ' / ' + t.en : ''}${lays ? '\n    配置: ' + lays : ''}`;
+    const evs = (t.events || []).map(e => `${e[0]}（${e[1]}${e[2] ? '，' + e[2] + '圈' : ''}）`).join(' / ');
+    return `- ${t.id}: ${t.zh}${t.en ? ' / ' + t.en : ''}${lays ? '\n    配置: ' + lays : ''}${evs ? '\n    賽事: ' + evs : ''}`;
   }).join('\n');
 
   const prompt = `這是 Gran Turismo 7（跑車浪漫旅 7）的比賽結算畫面截圖，介面可能是中文或英文。請讀出以下資料，只回傳 JSON。
@@ -157,7 +168,7 @@ function recognize_(b64, mime, ctx) {
 請找出玩家本人那一列，回報他的名次、車輛、時間欄位。若名稱對不上，以金色／黃色字那一列為準。
 
 欄位說明：
-- event：畫面上方的賽事名稱（例如 World Touring Car 800）
+- event：畫面上方的賽事名稱（例如 World Touring Car 800）。若該賽道的「賽事」清單裡有對應的，請回傳清單上的寫法；同一賽事在該賽道有多個配置時，用畫面上的配置和圈數判斷是哪一個
 - trackName：畫面上看到的賽道／佈局原文（例如 Spa 24h Layout）
 - trackId：從下方賽道清單中挑出最符合的 id（畫面可能顯示中文或英文名稱）；真的找不到就給空字串
 - layout：從該賽道的「配置」清單中挑最符合的，回傳括號前的中文名稱；清單沒有就照畫面原文
@@ -167,7 +178,7 @@ function recognize_(b64, mime, ctx) {
 - time：玩家那一列 Time 欄的原文（第一名是總時間，其他是 +差距 或 "1 Lap"）
 - laps：圈數（畫面下方 Laps 的數字，沒有就給 0）
 - fastestLap：最速圈「車手名 時間」，例如 "I. Fraga 2:14.130"
-- ppLimit：賽事名稱或畫面上的 PP 上限數字，沒有就給 0
+- ppLimit：畫面上明確寫出的 PP 上限數字，沒有就給 0（注意：賽事名稱裡的數字如 Sunday Cup 400 不是 PP 上限）
 
 賽道清單：
 ${trackList}`;

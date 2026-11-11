@@ -92,11 +92,11 @@ body { display: flex; flex-direction: column; overflow: hidden; }
 #map .leader { stroke: rgba(255,255,255,.4); stroke-width: 1; }
 #map .pin { cursor: pointer; }
 #map .pin-core { stroke: rgba(255,255,255,.85); stroke-width: 1.5; }
-#map .pin-glow { opacity: .45; }
-#map .pin.none .pin-core, #map .pin.none .pin-glow { fill: var(--red); }
-#map .pin.gold .pin-core, #map .pin.gold .pin-glow { fill: var(--gold); }
-#map .pin.silver .pin-core, #map .pin.silver .pin-glow { fill: var(--silver); }
-#map .pin.gray .pin-core, #map .pin.gray .pin-glow { fill: var(--gray); }
+#map .land-shadow { fill: #07111f; opacity: .55; }
+#map .pin.none .pin-core { fill: var(--red); }
+#map .pin.gold .pin-core { fill: var(--gold); }
+#map .pin.silver .pin-core { fill: var(--silver); }
+#map .pin.gray .pin-core { fill: var(--gray); }
 #map .sel-ring { fill: none; stroke: #fff; stroke-width: 3; opacity: .9; }
 #map.placing { cursor: crosshair; }
 
@@ -244,3 +244,29 @@ h4 { margin: 0 0 10px; }
   .modal { padding: 0; align-items: flex-end; }
   .modal-box, .modal-box.wide { border-radius: 12px 12px 0 0; max-height: 94%; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
 }
+
+/* ───────── 賽事卡片（仿遊戲賽道內的賽事列） ───────── */
+@media (min-width: 761px) { .panel { width: 560px; } }
+.ev-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.evcard { background: #1b1d22; border: 1px solid #2c2f37; border-radius: 4px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; transition: border-color .15s, transform .15s; }
+.evcard:hover { border-color: #9aa3b1; transform: translateY(-1px); }
+.evcard .ec-top { background: #eef1f5; color: #20232a; font-size: 12px; font-weight: 700; text-align: center; padding: 4px 6px; font-family: var(--en); letter-spacing: .3px; }
+.evcard .ec-name { font-family: var(--en); font-style: italic; font-weight: 700; font-size: 18px; line-height: 1.1; padding: 8px 10px 2px; }
+.evcard .ec-lo { font-size: 11px; color: var(--muted); padding: 0 10px; }
+.evcard .ec-rule { font-size: 10px; color: #8f98a8; padding: 3px 10px 0; font-family: var(--en); }
+.evcard .ec-res { margin-top: auto; display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #14151a; border-top: 1px solid #25272e; min-height: 50px; }
+.evcard .ec-res .trophy { width: 30px; height: 30px; font-size: 14px; }
+.evcard .ec-car { min-width: 0; font-family: var(--en); font-size: 14px; font-weight: 600; }
+.evcard .ec-car div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evcard .ec-car small { color: var(--muted); font-weight: 500; }
+.evcard .ec-none { color: #6f7787; font-size: 12px; }
+.evcard.won { border-color: rgba(242,194,58,.55); }
+.evcard.won .ec-res { background: linear-gradient(90deg, rgba(242,194,58,.14), #14151a 70%); }
+.evcard.new { opacity: .78; }
+.evcard.big { cursor: default; margin: 10px 0; }
+.evcard.big:hover { transform: none; border-color: #2c2f37; }
+.evcard.big .ec-name { font-size: 22px; }
+.ev-add { margin-bottom: 12px; width: 100%; justify-content: center; }
+.others-h { margin: 6px 0 8px; font-size: 13px; color: var(--muted); font-weight: 500; }
+.tlabel .tl-cnt.dim { color: #8b93a3; }
+@media (max-width: 760px) { .ev-grid { gap: 8px; } .evcard .ec-name { font-size: 15px; } }
