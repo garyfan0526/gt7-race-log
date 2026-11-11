@@ -459,3 +459,7 @@ body[data-theme="green"] { --led: #3ef08a; --led-glow: rgba(62,240,138,.75); --l
 .gcar.sel { background: var(--acc-soft); box-shadow: inset 3px 0 0 var(--accent); }
 .carpick { border-color: var(--accent); }
 @media (max-width: 760px) { .btn.led { padding: 6px 9px; font-size: 11px; } .btn.led .ico { width: 17px; height: 17px; } }
+
+/* ───────── iPhone 主畫面捷徑（standalone）：iOS 在狀態列下方有一條邊緣模糊帶，頂列往下讓出空間 ───────── */
+@media (display-mode: standalone) { .topbar { padding-top: calc(env(safe-area-inset-top) + 20px); } }
+html.standalone .topbar { padding-top: calc(env(safe-area-inset-top) + 20px); }

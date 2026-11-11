@@ -9,6 +9,8 @@ const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getT
 const flag = cc => cc ? `<span class="fi fi-${esc(String(cc).toLowerCase())}"></span>` : '';
 
 const LS_SETTINGS = 'gt7log.settings', LS_DATA = 'gt7log.data';
+// iPhone 主畫面捷徑開啟時加上 class（舊版 iOS 不支援 display-mode 媒體查詢的備援）
+if (navigator.standalone || matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('standalone');
 // 預設後端（Apps Script，beeckham03 帳號）。資料由通關密碼保護；設定裡清空網址＝本機模式。
 const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxQEzO0zwhfiIyvEwNiHLxUUqKYua8KqZMwLY-mQ8wlWjB8aCmEK9cjX164BNWC59Kl/exec';
 
