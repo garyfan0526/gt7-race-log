@@ -821,6 +821,8 @@ $('#btnRetryQueue').onclick = async () => {
 /* ───────────────────────── 設定 ───────────────────────── */
 const sf = $('#settingsForm'), tf = $('#trackForm');
 $('#btnSettings').onclick = () => {
+  // 顯示目前載入的版本與開啟方式，方便確認 iPhone 是否抓到新版
+  $('#verInfo').textContent = `版本 v${(document.querySelector('script[src^="app.js"]')?.getAttribute('src') || '').split('v=')[1] || '?'} · ${document.documentElement.classList.contains('standalone') ? '主畫面模式' : '瀏覽器模式'}`;
   for (const k of ['playerName', 'apiUrl', 'pass']) sf[k].value = S.settings[k] || '';
   tf.region.innerHTML = REGIONS.map(r => `<option value="${r.id}" ${r.id === S.region ? 'selected' : ''}>${r.name}</option>`).join('');
   $('#settingsModal').classList.remove('hidden');

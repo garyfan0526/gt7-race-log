@@ -463,3 +463,11 @@ body[data-theme="green"] { --led: #3ef08a; --led-glow: rgba(62,240,138,.75); --l
 /* ───────── iPhone 主畫面捷徑（standalone）：iOS 在狀態列下方有一條邊緣模糊帶，頂列往下讓出空間 ───────── */
 @media (display-mode: standalone) { .topbar { padding-top: calc(env(safe-area-inset-top) + 20px); } }
 html.standalone .topbar { padding-top: calc(env(safe-area-inset-top) + 20px); }
+
+/* 署名：避開 iPhone 圓角與底部 Home 指示條（主畫面捷徑時網頁延伸到螢幕邊緣） */
+.signature { right: calc(env(safe-area-inset-right) + 12px); bottom: calc(env(safe-area-inset-bottom) + 4px); }
+html.standalone .signature { right: calc(env(safe-area-inset-right) + 22px); }
+/* 主畫面捷徑：模糊帶再多讓一點 */
+@media (display-mode: standalone) { .topbar { padding-top: calc(env(safe-area-inset-top) + 30px); } }
+html.standalone .topbar { padding-top: calc(env(safe-area-inset-top) + 30px); }
+.ver { margin-right: auto; font-size: 11px; color: var(--muted); }
