@@ -916,7 +916,10 @@ $('#fileInput').onchange = e => { handleFiles(e.target.files).finally(() => { e.
 
 window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => { e.preventDefault(); handleFiles([...e.dataTransfer.files].filter(f => f.type.startsWith('image/'))); });
-window.addEventListener('resize', () => { clearTimeout(window._rz); window._rz = setTimeout(() => { placeNav(); if (S.screen === 'world') renderGlobe(); else if (S.screen === 'region') renderMap(); else if (S.screen === 'home') renderHomeGlobe(); }, 150); });
+// 轉向後 iOS 可能把整頁捲走：轉完立刻、再補兩次拉回頂端
+const snapTop = () => { if (scrollX || scrollY) scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; };
+window.addEventListener('orientationchange', () => [0, 300, 800].forEach(t => setTimeout(snapTop, t)));
+window.addEventListener('resize', () => { snapTop(); clearTimeout(window._rz); window._rz = setTimeout(() => { placeNav(); if (S.screen === 'world') renderGlobe(); else if (S.screen === 'region') renderMap(); else if (S.screen === 'home') renderHomeGlobe(); }, 150); });
 
 function refreshAll() {
   renderTopbar();
