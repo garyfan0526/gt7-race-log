@@ -7,7 +7,7 @@
  *     （可選）GEMINI_API_KEY_2 ～ GEMINI_API_KEY_6 = 其他 Google 帳號的金鑰；前一把額度用完會自動換下一把
  *       設好後在編輯器執行 testKeys 檢查每把是否有效（不消耗額度）
  *       PASSCODE       = 自訂通關密碼（前端 ⚙ 設定要填一樣的）
- *     （可選）GEMINI_MODELS = gemini-flash-latest,gemini-flash-lite-latest   ← 依序嘗試，額度滿就換下一個
+ *     （可選）GEMINI_MODELS = gemini-2.5-flash,gemini-flash-lite-latest   ← 依序嘗試，額度滿就換下一個
  *  2. 在編輯器選 setup 函式按「執行」，授權後會建立 Sheet、Drive 資料夾、每小時排程。
  *  3. 部署 → 新增部署作業 → 網頁應用程式：執行身分「我」、存取權「所有人」→ 複製 /exec 網址貼到前端設定。
  */
@@ -17,7 +17,9 @@ const REC_COLS = ['id', 'createdAt', 'raceDate', 'trackId', 'layout', 'event', '
   'car', 'time', 'laps', 'fastestLap', 'note', 'imageId', 'imageHash', 'source'];
 const TRK_COLS = ['id', 'zh', 'en', 'country', 'cc', 'region', 'lat', 'lon', 'layouts'];
 const Q_COLS = ['id', 'createdAt', 'imageId', 'imageHash', 'status', 'result', 'error', 'context'];
-const DEFAULT_MODELS = 'gemini-flash-latest,gemini-flash-lite-latest';
+// 2026-11-12 實測：gemini-flash-latest（3.8 Flash）常過載、帶完整賽道清單時會整個卡住不回應 → 不用
+// 2.5 Flash 約 5 秒、Flash-Lite 約 2 秒，都讀得正確
+const DEFAULT_MODELS = 'gemini-2.5-flash,gemini-flash-lite-latest';
 
 const props = () => PropertiesService.getScriptProperties();
 
@@ -165,7 +167,7 @@ function processQueue() {
 }
 
 /* ───────── Gemini 辨識 ───────── */
-function recognize_(b64, mime, ctx, deadline) {
+function recognize_(b64, mime, ctx, deadline, only) {
   if (!geminiKeys_().length) throw new Error('後端還沒設定 GEMINI_API_KEY');
   const trackList = (ctx.tracks || []).map(t => {
     const lays = (t.layouts || []).map(l => Array.isArray(l) ? (l[1] ? `${l[0]}（${l[1]}）` : l[0]) : l).join(' / ');
@@ -209,8 +211,8 @@ ${trackList}`;
   };
 
   // 順序：先用「最好的模型」把每一把金鑰都試過，全部額度滿了才降到下一個模型（例如 Flash-Lite）
-  const models = (props().getProperty('GEMINI_MODELS') || DEFAULT_MODELS).split(',').map(s => s.trim()).filter(Boolean);
-  const keys = geminiKeys_();
+  const models = only ? [only.model] : (props().getProperty('GEMINI_MODELS') || DEFAULT_MODELS).split(',').map(s => s.trim()).filter(Boolean);
+  const keys = only ? geminiKeys_().slice(0, 1) : geminiKeys_();
   const cache = CacheService.getScriptCache();
   let lastMsg = '';
   for (const m of models) {
@@ -267,6 +269,26 @@ function geminiKeys_() {
     if (v) out.push({ name: n, no: i + 1, key: v });
   });
   return out;
+}
+
+// 診斷：在編輯器執行。拿雲端最新一張截圖，用金鑰 1 照正式辨識的方式送給各模型，看各花幾秒（每個模型用掉 1 次額度）
+// 順序：快的先跑，懷疑會卡的 3.8 Flash 放最後，避免整個執行被卡死而看不到其他結果
+function pingModels() {
+  const files = DriveApp.getFolderById(props().getProperty('FOLDER_ID')).getFiles();
+  let f = null;
+  while (files.hasNext()) { const x = files.next(); if (!f || x.getDateCreated() > f.getDateCreated()) f = x; }
+  if (!f) { Logger.log('雲端資料夾沒有截圖'); return; }
+  const blob = f.getBlob(), b64 = Utilities.base64Encode(blob.getBytes());
+  const q = readAll_(SHEET_Q, Q_COLS).find(x => x.context);
+  const ctx = q ? JSON.parse(q.context) : { playerName: '', tracks: [] };
+  Logger.log(`測試截圖：${f.getName()}（${f.getDateCreated()}，${Math.round(blob.getBytes().length / 1024)} KB）；賽道清單 ${ctx.tracks.length} 條`);
+  for (const m of ['gemini-flash-lite-latest', 'gemini-2.5-flash', 'gemini-flash-latest']) {
+    const t = Date.now();
+    try {
+      const out = recognize_(b64, blob.getContentType(), ctx, 0, { model: m });
+      Logger.log(`✅ ${m} → ${Date.now() - t}ms：${out.trackName}／${out.car}／第 ${out.position} 名`);
+    } catch (e) { Logger.log(`❌ ${m} → ${Date.now() - t}ms：${String(e.message).slice(0, 200)}`); }
+  }
 }
 
 // 診斷：在編輯器執行，檢查每把金鑰是否有效、叫得到哪些設定的模型（只查模型清單，不消耗辨識額度）
