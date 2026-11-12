@@ -46,7 +46,7 @@ const Api = {
   },
   persistLocal() {
     try { localStorage.setItem(LS_DATA, JSON.stringify({ records: S.records, customTracks: S.customTracks })); }
-    catch (e) { toast('瀏覽器空間滿了，請改用雲端模式或匯出備份', 5000); throw e; }
+    catch (e) { toast('瀏覽器空間滿了，請改用雲端模式或匯出備份', 5000, 'err'); throw e; }
   },
   async load() {
     if (this.remote()) {
@@ -485,8 +485,8 @@ svg.on('click', async e => {
   const t = { ...S.placing, lat: +lat.toFixed(3), lon: +lon.toFixed(3) };
   S.placing = null;
   $('#placingHint').classList.add('hidden'); $('#map').classList.remove('placing');
-  try { await Api.addTrack(t); toast(`已新增賽道：${t.zh}`); renderRegion(); }
-  catch (err) { toast('新增失敗：' + err.message, 5000); }
+  try { await Api.addTrack(t); toast(`已新增賽道：${t.zh}`, 2500, 'ok'); renderRegion(); }
+  catch (err) { toast('新增失敗：' + err.message, 5000, 'err'); }
 });
 
 // 下方「本區賽事紀錄」（仿遊戲 Available Event Races）
@@ -604,8 +604,8 @@ $('#panelBody').addEventListener('click', async e => {
   }
   if (t.dataset.del) {
     if (!confirm('確定刪除這筆紀錄？（截圖也會一起丟進雲端硬碟垃圾桶，30 天內可還原）')) return;
-    try { await Api.deleteRecord(t.dataset.del); refreshAll(); toast('已刪除'); }
-    catch (err) { toast('刪除失敗：' + err.message, 5000); }
+    try { await Api.deleteRecord(t.dataset.del); refreshAll(); toast('已刪除', 2500, 'ok'); }
+    catch (err) { toast('刪除失敗：' + err.message, 5000, 'err'); }
   }
 });
 
@@ -647,11 +647,11 @@ async function handleFiles(files) {
   let queued = 0, dup = 0;
   for (let i = 0; i < files.length; i++) {
     let img;
-    try { img = await prepImage(files[i]); } catch (e) { toast(e.message); continue; }
+    try { img = await prepImage(files[i]); } catch (e) { toast(e.message, 4000, 'err'); continue; }
     if (S.records.some(r => r.imageHash === img.hash)) { dup++; continue; }
     if (!Api.remote()) { S.formQueue.push({ image: img, source: 'manual' }); continue; }
 
-    toast(`🤖 辨識中… ${i + 1} / ${files.length}（最多等 100 秒）`, 110000);
+    toastWait(`ANALYZING ${i + 1}/${files.length}`, 'AI 辨識中，最多等 100 秒', 100);
     try {
       const j = await Api.post('recognize', {
         data: img.data, mime: img.mime, hash: img.hash,
@@ -672,7 +672,7 @@ async function handleFiles(files) {
   const msg = [];
   if (dup) msg.push(`${dup} 張已經記過，略過`);
   if (queued) { msg.push(`Gemini 額度用完，${queued} 張已排入「待確認」，之後自動辨識`); await Api.load().catch(() => {}); renderTopbar(); }
-  if (msg.length) toast(msg.join('；'), 5000);
+  if (msg.length) toast(msg.join('；'), 5000, queued ? 'warn' : '');
   openNextForm();
 }
 
@@ -774,7 +774,7 @@ form.onsubmit = async e => {
   e.preventDefault();
   const item = S.formCur, fd = Object.fromEntries(new FormData(form));
   const car = carForSave();
-  if (!car) { toast('車名對不到官方清單：請從下方候選點一台，或勾選「清單沒有這台」', 5000); form.car.focus(); return; }
+  if (!car) { toast('車名對不到官方清單：請從下方候選點一台，或勾選「清單沒有這台」', 5000, 'warn'); form.car.focus(); return; }
   const btn = form.querySelector('[type=submit]'); btn.disabled = true;
   try {
     const img = item.image;
@@ -796,11 +796,11 @@ form.onsubmit = async e => {
     if (imageData) rec.imageData = imageData;
     if (!imageId && !imageData && base.imageData) rec.imageData = base.imageData;
     await Api.saveRecord(rec, item.queueId);
-    toast(`已儲存：${trackById(rec.trackId)?.zh || ''} 第 ${rec.position} 名`);
+    toast(`已儲存：${trackById(rec.trackId)?.zh || ''} 第 ${rec.position} 名`, 2500, 'ok');
     const more = S.formQueue.length;
     if (!more) gotoTrack(rec.trackId); else refreshAll();
     openNextForm();
-  } catch (err) { toast('儲存失敗：' + err.message, 6000); }
+  } catch (err) { toast('儲存失敗：' + err.message, 6000, 'err'); }
   finally { btn.disabled = false; }
 };
 
@@ -825,9 +825,9 @@ $('#queueList').addEventListener('click', e => {
   openNextForm();
 });
 $('#btnRetryQueue').onclick = async () => {
-  toast('🔄 重試辨識中…', 60000);
-  try { const j = await Api.post('processQueue'); await Api.load(); renderQueue(); renderTopbar(); toast(`完成：${j.done || 0} 張辨識好，${j.left || 0} 張仍在等待`, 4000); }
-  catch (err) { toast('失敗：' + err.message, 5000); }
+  toastWait('RETRYING', '重新辨識待確認的截圖…', 240);
+  try { const j = await Api.post('processQueue'); await Api.load(); renderQueue(); renderTopbar(); toast(`完成：${j.done || 0} 張辨識好，${j.left || 0} 張仍在等待`, 4000, 'ok'); }
+  catch (err) { toast('失敗：' + err.message, 5000, 'err'); }
 };
 
 /* ───────────────────────── 設定 ───────────────────────── */
@@ -868,12 +868,34 @@ $('#btnExport').onclick = () => {
 };
 
 /* ───────────────────────── 共用 ───────────────────────── */
-let toastTimer;
-function toast(msg, ms = 2500) {
-  const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden');
+// 提示框：黑底＋發光線條圖示（ok 綠／warn 琥珀／err 紅），不用 emoji
+let toastTimer, gaugeTimer;
+const TOAST_ICO = {
+  ok: '<circle cx="12" cy="12" r="9"/><path d="M7.5 12.5l3 3 6-6.5"/>',
+  warn: '<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.5v.5"/>',
+  err: '<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>',
+};
+function toast(msg, ms = 2500, kind = '') {
+  const t = $('#toast'); clearInterval(gaugeTimer);
+  t.className = 'toast' + (kind ? ' ' + kind : '');
+  t.innerHTML = (TOAST_ICO[kind] ? `<svg class="tico" viewBox="0 0 24 24">${TOAST_ICO[kind]}</svg>` : '') + `<span>${esc(msg)}</span>`;
   clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, ms);
 }
-function hideToast() { $('#toast').classList.add('hidden'); }
+// 等候中：換檔燈進度條，隨等待時間由綠→黃→紅亮起，maxSec 秒亮滿
+function toastWait(title, msg, maxSec) {
+  const t = $('#toast'), N = 10, t0 = Date.now(); clearTimeout(toastTimer); clearInterval(gaugeTimer);
+  t.className = 'toast wait';
+  t.innerHTML = `<div class="tw-top"><b>${esc(title)}</b><span class="tw-s">0 s</span></div>
+    <div class="tw-bar">${'<i></i>'.repeat(N)}</div><div class="tw-msg">${esc(msg)}</div>`;
+  const cells = [...t.querySelectorAll('.tw-bar i')], sec = $('.tw-s', t);
+  const tick = () => {
+    const s = (Date.now() - t0) / 1000, lit = Math.min(N, Math.ceil(s / maxSec * N));
+    sec.textContent = Math.floor(s) + ' s';
+    cells.forEach((c, k) => c.className = k < lit ? (k < 5 ? 'g' : k < 8 ? 'y' : 'r') : '');
+  };
+  tick(); gaugeTimer = setInterval(tick, 500);
+}
+function hideToast() { clearInterval(gaugeTimer); $('#toast').classList.add('hidden'); }
 function showLightbox(url) { const lb = $('#lightbox'); $('img', lb).src = url; lb.classList.remove('hidden'); }
 $('#lightbox').onclick = () => $('#lightbox').classList.add('hidden');
 $('#formImg').onclick = e => e.target.src && showLightbox(e.target.src);
@@ -898,10 +920,10 @@ function refreshAll() {
 async function boot() {
   renderBanner(); tickClock();
   try { await Api.load(); }
-  catch (e) { toast('讀取資料失敗：' + e.message + '（請檢查 ⚙ 設定）', 8000); }
-  if (!world) { try { await loadWorld(); } catch (e) { toast('地圖載入失敗，請檢查網路', 6000); } }
+  catch (e) { toast('讀取資料失敗：' + e.message + '（請檢查右上角設定）', 8000, 'err'); }
+  if (!world) { try { await loadWorld(); } catch (e) { toast('地圖載入失敗，請檢查網路', 6000, 'err'); } }
   if (S.screen === 'home') showHome(); else if (S.screen === 'world') showWorld(); else if (S.screen === 'garage') showGarage(); else renderRegion();
-  if (!S.settings.playerName) toast('第一次使用：請先到 ⚙ 設定填入遊戲內的玩家名稱', 6000);
+  if (!S.settings.playerName) toast('第一次使用：請先到右上角設定填入遊戲內的玩家名稱', 6000, 'warn');
 }
 setInterval(tickClock, 30000);
 bindCarField(); bindGarage(); // garage.js
