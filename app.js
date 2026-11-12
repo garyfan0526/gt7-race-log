@@ -3,6 +3,7 @@
 // 資料：沒設後端網址＝本機模式（localStorage）；有設＝Apps Script（Sheet＋Drive＋Gemini）
 
 const $ = (s, el = document) => el.querySelector(s);
+const ico = (id, cls = '') => `<svg class="si ${cls}"><use href="#${id}"/></svg>`;  // 自繪線條圖示（index.html 的 symbol）
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
@@ -138,7 +139,7 @@ function tickClock() {
 function renderBanner() {
   const b = $('#banner');
   b.classList.toggle('hidden', Api.remote());
-  b.textContent = '本機模式：資料只存在這個瀏覽器、截圖不會自動辨識。到 ⚙ 設定填入後端網址即可改用雲端＋AI 辨識。';
+  b.textContent = '本機模式：資料只存在這個瀏覽器、截圖不會自動辨識。到右上角設定填入後端網址即可改用雲端＋AI 辨識。';
 }
 
 /* ───────────────────────── 世界賽道（選區） ───────────────────────── */
@@ -213,7 +214,7 @@ function renderRecent() {
     return `<div class="rcard" data-track="${esc(r.trackId)}">${trophy(r.position)}<div class="info">
       <div class="t">${esc(t?.zh || r.trackId)}</div><div class="c">${esc(carLabel(r.car))}</div>
       <div class="d">${esc([r.event, r.raceDate].filter(Boolean).join(' · '))}</div></div></div>`;
-  }).join('') : '<div class="recent-empty">還沒有紀錄 — 比完賽按右上角「📷 截圖」上傳結算畫面，或「✍ 手動」輸入</div>';
+  }).join('') : '<div class="recent-empty">還沒有紀錄 — 比完賽按右上角「SHOT」上傳結算畫面，或「EDIT」手動輸入</div>';
 }
 $('#recentStrip').addEventListener('click', e => {
   const c = e.target.closest('.rcard'); if (!c) return;
@@ -242,7 +243,7 @@ function renderHome() {
   const g = garageData(), top = [...g].sort((a, b) => b.wins - a.wins || b.races - a.races)[0];
   $('#hcGarageSub').textContent = `官方 ${CAR.length} 台車款`;
   $('#hcGarageStat').innerHTML = g.length
-    ? `開過 <b>${g.length}</b> 台・拿過第一 <b>${g.filter(x => x.wins).length}</b> 台<br>王牌：<b class="car">${esc(top.short)}</b>（🏆 ${top.wins}）`
+    ? `開過 <b>${g.length}</b> 台・拿過第一 <b>${g.filter(x => x.wins).length}</b> 台<br>王牌：<b class="car">${esc(top.short)}</b>（${ico('iTrophy', 'gold')} ${top.wins}）`
     : '還沒有紀錄<br>上傳截圖後，開過的車會出現在這裡';
   renderHomeGlobe();
 }
@@ -347,7 +348,7 @@ function renderMap() {
   svg.call(zoomer).call(zoomer.transform, d3.zoomIdentity).on('dblclick.zoom', null);
 
   labelsEl.innerHTML = '';
-  // 小螢幕（手機直放或橫放）用精簡卡片：只留一行「名稱＋🏆」
+  // 小螢幕（手機直放或橫放）用精簡卡片：只留一行「名稱＋獎盃數」
   labelsEl.classList.toggle('compact', W < 900 || H < 560);
   for (const t of viewTracks()) {
     const st = trackStatus(t.id);
@@ -355,8 +356,8 @@ function renderMap() {
     el.className = `tlabel ${st.cls}` + (S.panelTrack === t.id ? ' active' : '');
     el.dataset.id = t.id;
     el.innerHTML = `<div class="tl-box">${st.n ? trophy(st.best) : '<div class="new"></div>'}</div>
-      <div class="tl-txt"><div class="tl-cty">${flag(t.cc)}${esc(t.country || '')}${st.evTotal ? `<span class="tl-cnt ${st.evWon ? '' : 'dim'}">🏆${st.evWon}/${st.evTotal}</span>` : ''}</div>
-      <div class="tl-nm">${esc(t.zh)}${st.evTotal ? `<span class="tl-cnt2 ${st.evWon ? '' : 'dim'}">🏆${st.evWon}/${st.evTotal}</span>` : ''}</div></div>`;
+      <div class="tl-txt"><div class="tl-cty">${flag(t.cc)}${esc(t.country || '')}${st.evTotal ? `<span class="tl-cnt ${st.evWon ? '' : 'dim'}">${ico('iTrophy')}${st.evWon}/${st.evTotal}</span>` : ''}</div>
+      <div class="tl-nm">${esc(t.zh)}${st.evTotal ? `<span class="tl-cnt2 ${st.evWon ? '' : 'dim'}">${ico('iTrophy')}${st.evWon}/${st.evTotal}</span>` : ''}</div></div>`;
     el.onclick = () => openPanel(t.id);
     labelsEl.appendChild(el);
   }
@@ -538,7 +539,7 @@ function renderPanel() {
   const cur = S.panelEvent && evs.find(e => evKey(e) === S.panelEvent);
   if (cur) {
     const rs = recsOfEvent(cur).sort(posCmp);
-    body.innerHTML = `<button class="btn small" data-back>◀ 全部賽事</button>
+    body.innerHTML = `<button class="btn small" data-back>${ico('iBack')} 全部賽事</button>
       <div class="ev-detail">${evCard(cur, true)}</div>
       <button class="btn primary ev-add" data-addev="${esc(evKey(cur))}">＋ 記錄這場</button>
       ${rs.length ? `<h4 class="others-h">全部紀錄 ${rs.length} 筆（依名次、日期排序；每筆都可以單獨編輯或刪除）</h4>
@@ -664,7 +665,7 @@ async function handleFiles(files) {
       else S.formQueue.push({ image: img, source: 'manual', warn: 'AI 辨識失敗，請手動填：' + (j.error || '') });
     } catch (e) {
       S.formQueue.push({ image: img, source: 'manual', warn: e.timeout
-        ? 'AI 辨識逾時（Google 回應太慢），請先手動填；或關掉這張，稍後會出現在「⏳ 待確認」'
+        ? 'AI 辨識逾時（Google 回應太慢），請先手動填；或關掉這張，稍後會出現在頂列的「待確認」'
         : '連不到後端，請手動填：' + e.message });
     }
   }
@@ -749,11 +750,11 @@ function openNextForm() {
   $('#formTitle').textContent = item.edit ? '編輯紀錄' : isAi ? '確認 AI 辨識結果' : '新增紀錄';
   const badge = $('#formBadge');
   badge.className = 'badge' + (isAi ? ' ai' : '');
-  badge.textContent = isAi ? '🤖 AI 已填好，請核對' : item.edit ? '' : img ? '手動填寫（截圖對照）' : '手動輸入';
-  let prog = formTotal > 1 ? `第 ${formTotal - S.formQueue.length} / ${formTotal} 張` : '';
-  if (item.warn) prog = `⚠ ${item.warn}　${prog}`;
-  if (isAi && p.trackName && !trackId) prog = `⚠ AI 讀到賽道「${p.trackName}」，對不到清單，請手動選　${prog}`;
-  $('#formProgress').textContent = prog;
+  badge.innerHTML = isAi ? '<span class="aichip">AI</span> 已填好，請核對' : item.edit ? '' : img ? '手動填寫（截圖對照）' : '手動輸入';
+  let prog = formTotal > 1 ? esc(`第 ${formTotal - S.formQueue.length} / ${formTotal} 張`) : '';
+  if (item.warn) prog = `<span class="fwarn">${ico('iWarn')}${esc(item.warn)}</span>　${prog}`;
+  if (isAi && p.trackName && !trackId) prog = `<span class="fwarn">${ico('iWarn')}AI 讀到賽道「${esc(p.trackName)}」，對不到清單，請手動選</span>　${prog}`;
+  $('#formProgress').innerHTML = prog;
   $('#formSkip').style.display = formTotal > 1 ? '' : 'none';
   $('#formModal').classList.remove('hidden');
 }
@@ -808,7 +809,7 @@ form.onsubmit = async e => {
 function renderQueue() {
   $('#queueList').innerHTML = S.queue.length ? S.queue.map(q => {
     const url = q.imageId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(q.imageId)}&sz=w400` : '';
-    const st = q.status === 'ready' ? '✅ 已辨識，待確認' : q.status === 'failed' ? '❌ 辨識失敗：' + esc(q.error || '') : '⏳ 等待額度重置';
+    const st = q.status === 'ready' ? `<span class="qs ok">${ico('iOk')}已辨識，待確認</span>` : q.status === 'failed' ? `<span class="qs err">${ico('iErr')}辨識失敗：</span>` + esc(q.error || '') : `<span class="qs wait">${ico('iWait')}等待額度重置</span>`;
     return `<div class="qitem">${url ? `<img src="${url}" alt="">` : ''}<div class="info">${st}<div class="muted">${esc(String(q.createdAt || '').slice(0, 16).replace('T', ' '))}</div></div>
       <button class="btn small ${q.status === 'ready' ? 'primary' : ''}" data-q="${esc(q.id)}">${q.status === 'ready' ? '確認' : '手動填'}</button></div>`;
   }).join('') : '<div class="empty">沒有待確認的截圖</div>';
@@ -875,6 +876,11 @@ const TOAST_ICO = {
   warn: '<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.5v.5"/>',
   err: '<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>',
 };
+// 世界賽道畫面有「最近紀錄」時，提示框改放在它上方的空位，不要擋住卡片
+function placeToast(t) {
+  const rc = $('.recent'), r = rc && rc.offsetParent ? rc.getBoundingClientRect() : null;
+  t.style.bottom = r && r.height ? Math.round(innerHeight - r.top + 14) + 'px' : '';
+}
 function toast(msg, ms = 2500, kind = '') {
   const t = $('#toast'); clearInterval(gaugeTimer);
   t.className = 'toast' + (kind ? ' ' + kind : '');
@@ -887,6 +893,7 @@ function toastWait(title, msg, maxSec) {
   t.className = 'toast wait';
   t.innerHTML = `<div class="tw-top"><b>${esc(title)}</b><span class="tw-s">0 s</span></div>
     <div class="tw-bar">${'<i></i>'.repeat(N)}</div><div class="tw-msg">${esc(msg)}</div>`;
+  placeToast(t);
   const cells = [...t.querySelectorAll('.tw-bar i')], sec = $('.tw-s', t);
   const tick = () => {
     const s = (Date.now() - t0) / 1000, lit = Math.min(N, Math.ceil(s / maxSec * N));

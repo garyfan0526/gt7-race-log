@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,600&family=Kanit:ital,wght@1,900&family=Orbitron:wght@700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css">
-<link rel="stylesheet" href="style.css?v=22">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body data-theme="amber">
 
@@ -23,8 +23,16 @@
   <symbol id="iGarage" viewBox="0 0 24 24"><path d="M2.5 10.5L12 4l9.5 6.5"/><path d="M4.5 9.5V20h15V9.5"/><path d="M8 20v-7.5h8V20M8 15h8M8 17.5h8"/></symbol>
   <symbol id="iGear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5l1.6 2.6 3-.6.6 3 2.6 1.6-1.4 2.9 1.4 2.9-2.6 1.6-.6 3-3-.6L12 21.5l-1.6-2.6-3 .6-.6-3-2.6-1.6L5.6 12 4.2 9.1l2.6-1.6.6-3 3 .6z"/></symbol>
   <symbol id="iWait" viewBox="0 0 24 24"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9"/></symbol>
+  <symbol id="iOk" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7.5 12.5l3 3 6-6.5"/></symbol>
+  <symbol id="iWarn" viewBox="0 0 24 24"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.5v.5"/></symbol>
+  <symbol id="iErr" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></symbol>
+  <symbol id="iRetry" viewBox="0 0 24 24"><path d="M20 12a8 8 0 11-2.3-5.7M20 4v5h-5"/></symbol>
+  <symbol id="iTrophy" viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 01-10 0z"/><path d="M7 6H4v1a3 3 0 003 3M17 6h3v1a3 3 0 01-3 3M12 14v3M8 20h8M9 20l1-3h4l1 3"/></symbol>
+  <symbol id="iFlag" viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h14v9H5"/><path d="M5 4h3.5v3H5zM12 4h3.5v3H12zM8.5 7H12v3H8.5zM15.5 7H19v3h-3.5zM5 10h3.5v3H5zM12 10h3.5v3H12z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="iSearch" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+  <symbol id="iBack" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="iDown" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
 </defs></svg>
-
 <!-- ── 頂列（仿遊戲狀態列） ── -->
 <header class="topbar">
   <div class="tb-logo" id="btnHome" title="回首頁">GT</div>
@@ -50,8 +58,16 @@
   <symbol id="hFlagIco" viewBox="0 0 64 64"><rect x="12" y="8" width="4" height="50" rx="2" fill="#fff"/><g transform="translate(18 10)"><rect width="36" height="27" fill="#fff"/><g fill="#111"><rect width="9" height="9"/><rect x="18" width="9" height="9"/><rect x="9" y="9" width="9" height="9"/><rect x="27" y="9" width="9" height="9"/><rect y="18" width="9" height="9"/><rect x="18" y="18" width="9" height="9"/></g></g></symbol>
   <symbol id="hGarageIco" viewBox="0 0 64 64"><path d="M6 26 L32 10 L58 26 L58 30 L32 14.5 L6 30 Z" fill="#fff"/><path d="M11 30 L32 17.5 L53 30 L53 54 L11 54 Z" fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"/><g fill="#fff"><rect x="18" y="33" width="28" height="3.5" rx="1"/><rect x="18" y="39" width="28" height="3.5" rx="1"/><rect x="18" y="45" width="28" height="3.5" rx="1"/></g></symbol>
   <filter id="hShadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000" flood-opacity=".45"/></filter>
-</defs></svg>
-<section class="screen hidden" id="homeScreen">
+  <symbol id="iOk" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7.5 12.5l3 3 6-6.5"/></symbol>
+  <symbol id="iWarn" viewBox="0 0 24 24"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.5v.5"/></symbol>
+  <symbol id="iErr" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></symbol>
+  <symbol id="iRetry" viewBox="0 0 24 24"><path d="M20 12a8 8 0 11-2.3-5.7M20 4v5h-5"/></symbol>
+  <symbol id="iTrophy" viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 01-10 0z"/><path d="M7 6H4v1a3 3 0 003 3M17 6h3v1a3 3 0 01-3 3M12 14v3M8 20h8M9 20l1-3h4l1 3"/></symbol>
+  <symbol id="iFlag" viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h14v9H5"/><path d="M5 4h3.5v3H5zM12 4h3.5v3H12zM8.5 7H12v3H8.5zM15.5 7H19v3h-3.5zM5 10h3.5v3H5zM12 10h3.5v3H12z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="iSearch" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+  <symbol id="iBack" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="iDown" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+</defs></svg><section class="screen hidden" id="homeScreen">
   <div class="hcard hc-world" id="goWorld">
     <svg class="hc-scene" viewBox="0 0 1400 1045" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <image href="home-arena.jpg?v=1" width="1400" height="1045"/>
@@ -108,7 +124,7 @@
   <svg id="map"></svg>
   <div id="labels"></div>
   <div class="region-nav" id="regionNav">
-    <button class="btn back" id="btnBack" title="回世界賽道">◀<span class="bt"> 世界賽道</span></button>
+    <button class="btn back" id="btnBack" title="回世界賽道"><svg class="si"><use href="#iBack"/></svg><span class="bt"> 世界賽道</span></button>
     <div class="views" id="viewTabs"></div>
   </div>
   <div class="legend">
@@ -119,7 +135,7 @@
   </div>
   <div class="map-note hidden" id="mapNote"></div>
   <div class="events" id="eventStrip">
-    <div class="events-title"><span class="flagico">🏁</span> 本區賽事紀錄</div>
+    <div class="events-title"><svg class="si flagico"><use href="#iFlag"/></svg> 本區賽事紀錄</div>
     <div class="events-grid" id="eventGrid"></div>
   </div>
   <div class="placing-hint hidden" id="placingHint">在地圖上點一下，放置新賽道 <button class="btn small" id="cancelPlace">取消</button></div>
@@ -137,7 +153,7 @@
       </div>
       <div class="grow2">
         <select id="gSort"><option value="wins">排序：勝場</option><option value="races">排序：跑過場數</option><option value="last">排序：最近開過</option><option value="name">排序：廠牌 A–Z</option></select>
-        <input id="gSearch" placeholder="🔍 搜尋車名／廠牌" autocomplete="off">
+        <span class="gsearch"><svg class="si"><use href="#iSearch"/></svg><input id="gSearch" placeholder="搜尋車名／廠牌" autocomplete="off"></span>
       </div>
       <div class="muted gstats" id="gStats"></div>
     </div>
@@ -198,7 +214,7 @@
         <div class="form-foot">
           <span class="muted" id="formProgress"></span>
           <button type="button" class="btn" id="formSkip">略過</button>
-          <button type="submit" class="btn primary">💾 儲存</button>
+          <button type="submit" class="btn led primary save"><svg class="ico"><use href="#iOk"/></svg><span class="bt">SAVE</span></button>
         </div>
       </form>
     </div>
@@ -211,7 +227,7 @@
     <div class="modal-head"><h3>待確認的截圖</h3><button class="btn icon" data-close>✕</button></div>
     <p class="muted">Gemini 額度用完時，截圖會先排在這裡，每小時自動重試辨識。辨識好的點一下確認即可；也可以直接手動填。</p>
     <div id="queueList"></div>
-    <div class="form-foot"><button class="btn" id="btnRetryQueue">🔄 立即重試辨識</button></div>
+    <div class="form-foot"><button class="btn led" id="btnRetryQueue"><svg class="ico"><use href="#iRetry"/></svg>立即重試辨識</button></div>
   </div>
 </div>
 
@@ -251,7 +267,7 @@
       <div class="form-foot"><button type="submit" class="btn">下一步：到地圖上點位置</button></div>
     </form>
     <hr>
-    <div class="form-foot"><span class="ver" id="verInfo"></span><button class="btn small" id="btnExport">⬇ 匯出 JSON 備份</button></div>
+    <div class="form-foot"><span class="ver" id="verInfo"></span><button class="btn small" id="btnExport"><svg class="si"><use href="#iDown"/></svg> 匯出 JSON 備份</button></div>
   </div>
 </div>
 
@@ -265,10 +281,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
-<script src="tracks.js?v=22"></script>
-<script src="events.js?v=22"></script>
-<script src="cars.js?v=22"></script>
-<script src="garage.js?v=22"></script>
-<script src="app.js?v=22"></script>
+<script src="tracks.js?v=23"></script>
+<script src="events.js?v=23"></script>
+<script src="cars.js?v=23"></script>
+<script src="garage.js?v=23"></script>
+<script src="app.js?v=23"></script>
 </body>
 </html>

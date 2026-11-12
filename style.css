@@ -244,8 +244,8 @@ h4 { margin: 0 0 10px; }
   .avail-title { font-size: 14px; }
   .avail-list { font-size: 12px; line-height: 1.7; }
   .recent { padding-bottom: 18px; }
-  .rcard { width: 200px; }
-  .region-nav { top: 8px; left: 8px; }
+  .rcard { width: calc((100vw - 40px) / 2); padding: 8px 9px; gap: 8px; }  /* 剛好並排兩張完整卡片，其餘往右滑 */
+  .rcard .trophy { width: 30px; height: 30px; font-size: 15px; }  .region-nav { top: 8px; left: 8px; }
   .legend { top: auto; bottom: 8px; right: 8px; left: 8px; flex-wrap: wrap; gap: 4px 10px; justify-content: center; }
   .events { display: none; }
   .tlabel .tl-box { width: 34px; }
@@ -498,3 +498,20 @@ html.standalone .signature { bottom: max(3px, calc(env(safe-area-inset-bottom) /
 
 /* 首頁：拿掉「進入」按鈕後保留同樣高度的隱形空白，標題與統計維持原位置 */
 .hc-go.hc-ghost { visibility: hidden; }
+
+/* ───────── 自繪線條小圖示（取代 emoji） ───────── */
+.si { width: 1.05em; height: 1.05em; vertical-align: -0.16em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.si.gold { color: var(--gold); }
+.flagico.si { width: 1em; height: 1em; }
+.tl-cnt .si, .tl-cnt2 .si { width: 1.1em; height: 1.1em; margin-right: 1px; }
+.btn .si { margin-right: 2px; }
+.gsearch { position: relative; flex: 1; display: flex; min-width: 0; }
+.gsearch .si { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: #8b93a3; pointer-events: none; }
+.gsearch input { flex: 1; min-width: 0; padding-left: 30px !important; }
+.aichip { font: 700 10px "Orbitron", sans-serif; border: 1px solid #0f5a2e; color: #3ef08a; background: #0a0a0c; border-radius: 4px; padding: 1px 5px; margin-right: 3px; text-shadow: 0 0 5px rgba(62,240,138,.7); }
+.fwarn { color: #ffcf66; } .fwarn .si { color: #ffb000; margin-right: 4px; filter: drop-shadow(0 0 3px rgba(255,176,0,.7)); }
+.qs { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
+.qs.ok { color: #3ef08a; } .qs.err { color: #ff6060; } .qs.wait { color: #ffb000; }
+.okc { color: #3ef08a; margin-right: 6px; }
+/* 表單儲存鍵：綠色 LED「SAVE」 */
+.btn.led.save { padding: 8px 18px; font-size: 14px; }
