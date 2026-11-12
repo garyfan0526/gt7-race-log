@@ -515,3 +515,29 @@ html.standalone .signature { bottom: max(3px, calc(env(safe-area-inset-bottom) /
 .okc { color: #3ef08a; margin-right: 6px; }
 /* 表單儲存鍵：綠色 LED「SAVE」 */
 .btn.led.save { padding: 8px 18px; font-size: 14px; }
+/* ───────── 車庫總覽（沒選車時；電腦版在右邊、手機版在清單最上面） ───────── */
+.gov-h { font-size: 12px; color: var(--muted); letter-spacing: 1px; }
+.gov-t { font: italic 700 30px var(--en); margin: 0 0 6px; }
+.gace { margin-top: 12px; background: linear-gradient(90deg, rgba(245,197,66,.14), rgba(245,197,66,.02)); border: 1px solid #5a4a1a; border-radius: 6px;
+  padding: 10px 14px; display: flex; align-items: center; gap: 14px; cursor: pointer; }
+.gace:hover { border-color: #a8892c; }
+.gace .lab { font: 700 11px "Orbitron", sans-serif; color: #f5c542; border: 1px solid #7a6420; border-radius: 4px; padding: 2px 6px; letter-spacing: 1px; flex: none; }
+.gace .ai { min-width: 0; } .gace .nm { font: italic 700 22px var(--en); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .gace .mt { font-size: 12px; color: var(--muted); }
+.gace .w { margin-left: auto; text-align: right; font: 700 26px var(--en); color: var(--gold); flex: none; } .gace .w small { display: block; font: 400 11px "Noto Sans TC", sans-serif; color: var(--muted); }
+.gace .go { color: #9aa3b1; font-size: 13px; white-space: nowrap; }
+.grank { display: flex; align-items: center; gap: 12px; padding: 6px 4px; border-top: 1px solid #25272e; cursor: pointer; }
+.grank:hover { background: #15171b; }
+.grank .no { width: 22px; font: 700 16px var(--en); color: #8b93a3; text-align: center; flex: none; } .grank .no.n1 { color: var(--gold); }
+.grank .nm { flex: 1; font: italic 600 16px var(--en); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grank .nm small { font: 400 11px "Noto Sans TC", sans-serif; color: var(--muted); margin-left: 6px; }
+.grank .w { font: 700 14px var(--en); color: var(--gold); width: 46px; text-align: right; flex: none; } .grank .w.z { color: #5d6472; }
+.grank .r { font-size: 11px; color: var(--muted); width: 44px; text-align: right; flex: none; }
+.ghint { margin-top: 14px; font-size: 12px; color: #8b93a3; border: 1px dashed #3a3e47; border-radius: 6px; padding: 8px 10px; text-align: center; }
+.gback { margin-bottom: 8px; }
+.govm { border: 1px solid #3a3e47; border-radius: 6px; background: #121317; margin: 0 0 8px; padding: 9px 11px; }
+.govm .hd { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; color: #dfe3ea; cursor: pointer; }
+.govm .hd span { font-size: 11px; color: var(--muted); font-weight: 400; }
+.govm .gkpi { margin-top: 7px; flex-wrap: nowrap; } .govm .gkpi div { flex: 1 1 0; padding: 4px 7px; } .govm .gkpi b { font-size: 18px; }
+.govm .gace { margin-top: 7px; padding: 7px 10px; gap: 9px; } .govm .gace .nm { font-size: 16px; } .govm .gace .w { font-size: 20px; }
+.govm .gr3 { margin-top: 6px; } .govm .grank { padding: 4px 2px; } .govm .grank .nm { font-size: 14px; }
+@media (max-width: 760px) { .gback { display: none; } }
