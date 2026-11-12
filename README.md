@@ -16,6 +16,8 @@
 - **AI 額度（多金鑰輪替）**：指令碼屬性放 `GEMINI_API_KEY`＋`GEMINI_API_KEY_2`～`_6`（不同 Google 帳號，各有獨立免費額度：2.5 Flash 每天 20 次、每分鐘 5 次）。辨識時先用 2.5 Flash 依序試每把金鑰，全滿才降到 Flash-Lite；某把額度滿 30 分鐘內自動跳過。目前 4 把（2026-11-12 testKeys：4 把都有效）。在 Apps Script 編輯器執行 `testKeys` 可檢查每把是否有效（不耗額度）。後端已部署為版本 7。辨識有時間上限：後端超過 50 秒改排進「待確認」、網頁最多等 100 秒就改開手動表單；Gemini 用低思考模式加速。卡住時到 Apps Script「執行項目」點該筆看 `[Gemini]` 日誌（每把金鑰／模型的回應碼與耗時）
 - **安全**：網頁公開，但讀寫資料都要通關密碼（Apps Script 指令碼屬性 `PASSCODE`）。沒有密碼的人打開網址只看得到外殼（賽道、賽事、車款清單），個人紀錄是空的、也存不進去。忘記或外流時，到專案設定修改即可，不用重新部署
 
+- **遊戲資料核對（2026-11-12）**：車款、賽道、賽事都已含 1.72 版（Spec IV Part 1：小米 VGT、RX-VISION GT3 EVO 等 6 台車，SUGO 賽道 3 場賽事）。官方車輛清單資料檔跟 10 月版同一個，仍是 580 台。gtplus.app 顯示 583 台／289 場是算法不同：289 裡約 10 場不屬於任何賽道；逐賽道比對只差 3 處——富士 Japanese Clubman Cup 550、紐堡林北側 World Touring Car 600 在 gtplus 各多列一筆同名、同圈數的重複，京都 Japanese Clubman Cup 550 則是 Fandom 有、gtplus 沒有。不需更新。下次改版：先看官方 carlist 資料檔檔名有沒有變（_research/cars/build_cars.py），賽事用 _research/fetch_events.py 重抓 Fandom
+
 ## 怎麼更新
 - **網頁**：改完檔案後，把 `index.html` 裡的 `?v=N` 加 1（避免手機讀到舊快取）→ `git commit` → `git push`，約 1 分鐘後生效
 - **後端**：Apps Script 編輯器貼上新的 `Code.gs` → 部署 → 管理部署作業 → 選 `AKfycbxQEzO…` 那個 → 編輯 → 版本選「建立新版本」→ 部署（網址不變）
