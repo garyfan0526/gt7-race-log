@@ -5,8 +5,8 @@
 ## 目前狀態（2026-11-11）
 - ✅ 已上線：**https://garyfan0526.github.io/gt7-race-log/**（iPhone 用 Safari 開 →「分享 → 加入主畫面」）
 - ✅ AI 截圖辨識已實測成功；手動輸入、刪除、手機與電腦同步都可用
-- ✅ 首頁分割畫面（世界賽道／車庫）、車庫視角（含全部車款切換）、官方車名清單（580 台）已上線（目前靜態檔版本 `?v=22`）
-- ✅ 提示框不用 emoji：等候中用「換檔燈進度條」（`toastWait(標題, 說明, 秒數)`，綠→黃→紅亮滿）；一般提示 `toast(訊息, 毫秒, 'ok'|'warn'|'err')` 帶發光線條圖示
+- ✅ 首頁分割畫面（世界賽道／車庫）、車庫視角（含全部車款切換）、官方車名清單（580 台）已上線（目前靜態檔版本 `?v=23`）
+- ✅ 全站不用 emoji（v23）：圖示都是 index.html 的自繪 symbol，JS 用 `ico(id)` 插入；表單儲存鍵是綠色 LED「SAVE」。手機「最近紀錄」剛好並排兩張；世界賽道畫面的提示框自動放在最近紀錄上方空位（`placeToast`）。提示框：等候中用「換檔燈進度條」（`toastWait(標題, 說明, 秒數)`，綠→黃→紅亮滿）；一般提示 `toast(訊息, 毫秒, 'ok'|'warn'|'err')` 帶發光線條圖示
 - ✅ AI 辨識卡住已修（後端版本 7，2026-11-12）：原因是 3.8 Flash（`gemini-flash-latest`）過載，帶完整賽道清單時整個不回應（doPost 卡到 360 秒逾時）。`pingModels()` 實測：Flash-Lite 1.8 秒、2.5 Flash 5 秒都讀對，3.8 Flash 回 503。現在模型順序改成 `gemini-2.5-flash` → `gemini-flash-lite-latest`，不再用 3.8 Flash。`pingModels()` 留在後端當診斷工具（拿雲端最新截圖測各模型，每個模型耗 1 次額度）
 - **後端**：Apps Script「GT7 戰績簿 API」，在 **beeckham03@gmail.com** 帳號
   - 資料：該帳號的 Google 試算表「GT7 賽事紀錄」
