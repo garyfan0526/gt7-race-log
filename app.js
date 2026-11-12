@@ -24,12 +24,22 @@ const S = {
 /* ───────────────────────── 資料存取 ───────────────────────── */
 const Api = {
   remote: () => !!S.settings.apiUrl,
-  async post(action, payload = {}) {
-    const res = await fetch(S.settings.apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 避免 CORS 預檢
-      body: JSON.stringify({ action, pass: S.settings.pass || '', ...payload }),
-    });
+  async post(action, payload = {}, timeoutMs = 0) {
+    // timeoutMs：等太久就放棄（例如 AI 辨識），避免畫面一直轉圈沒反應
+    const ctl = timeoutMs ? new AbortController() : null;
+    const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : null;
+    let res;
+    try {
+      res = await fetch(S.settings.apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 避免 CORS 預檢
+        body: JSON.stringify({ action, pass: S.settings.pass || '', ...payload }),
+        signal: ctl ? ctl.signal : undefined,
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') { const t = new Error('等候逾時'); t.timeout = true; throw t; }
+      throw e;
+    } finally { if (timer) clearTimeout(timer); }
     const j = await res.json();
     if (!j.ok) throw new Error(j.error || '後端錯誤');
     return j;
@@ -641,19 +651,21 @@ async function handleFiles(files) {
     if (S.records.some(r => r.imageHash === img.hash)) { dup++; continue; }
     if (!Api.remote()) { S.formQueue.push({ image: img, source: 'manual' }); continue; }
 
-    toast(`🤖 辨識中… ${i + 1} / ${files.length}`, 60000);
+    toast(`🤖 辨識中… ${i + 1} / ${files.length}（最多等 100 秒）`, 110000);
     try {
       const j = await Api.post('recognize', {
         data: img.data, mime: img.mime, hash: img.hash,
         playerName: S.settings.playerName || '', tracks: aiTrackContext(),
-      });
+      }, 100000);
       if (j.status === 'duplicate' || j.status === 'queued_already') { dup++; continue; }
       img.imageId = j.imageId;
       if (j.status === 'ok') S.formQueue.push({ image: img, prefill: j.result, source: 'ai' });
       else if (j.status === 'queued') queued++;
       else S.formQueue.push({ image: img, source: 'manual', warn: 'AI 辨識失敗，請手動填：' + (j.error || '') });
     } catch (e) {
-      S.formQueue.push({ image: img, source: 'manual', warn: '連不到後端，請手動填：' + e.message });
+      S.formQueue.push({ image: img, source: 'manual', warn: e.timeout
+        ? 'AI 辨識逾時（Google 回應太慢），請先手動填；或關掉這張，稍後會出現在「⏳ 待確認」'
+        : '連不到後端，請手動填：' + e.message });
     }
   }
   hideToast();

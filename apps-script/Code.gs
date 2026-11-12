@@ -116,12 +116,17 @@ const ACTIONS = {
     if (dupRec) return { status: 'duplicate', record: dupRec };
     if (readAll_(SHEET_Q, Q_COLS).some(q => q.imageHash === req.hash)) return { status: 'queued_already' };
 
+    const t0 = Date.now();
     const imageId = saveImage_(req.data, req.mime, req.hash);
+    console.log(`[辨識] 截圖存入 Drive ${Date.now() - t0}ms`);
     const context = { playerName: req.playerName || '', tracks: req.tracks || [] };
     try {
-      const result = recognize_(req.data, req.mime, context);
+      // 時間預算 50 秒：超過就不再換金鑰，改排進「待確認」，讓網頁盡快拿到回應
+      const result = recognize_(req.data, req.mime, context, t0 + 50000);
+      console.log(`[辨識] 完成，總共 ${Date.now() - t0}ms（金鑰${result.keyNo}／${result.model}）`);
       return { status: 'ok', imageId, result };
     } catch (err) {
+      console.log(`[辨識] 失敗 ${Date.now() - t0}ms：${err.message}`);
       if (err.quota) {
         withLock_(() => appendRow_(SHEET_Q, Q_COLS, {
           id: Utilities.getUuid(), createdAt: new Date().toISOString(), imageId, imageHash: req.hash,
@@ -139,11 +144,16 @@ const ACTIONS = {
 /* ───────── 排隊自動重試（每小時觸發） ───────── */
 function processQueue() {
   const items = readAll_(SHEET_Q, Q_COLS).filter(q => q.status === 'pending');
+  const stopAt = Date.now() + 4 * 60 * 1000; // Apps Script 單次最多 6 分鐘，留餘裕
+  const savedHashes = new Set(readAll_(SHEET_REC, REC_COLS).map(r => r.imageHash).filter(Boolean));
   let done = 0;
   for (const q of items) {
+    if (Date.now() > stopAt) break;
+    // 這張已經手動存成紀錄了（例如網頁等逾時改手動填）→ 從排隊移除
+    if (q.imageHash && savedHashes.has(q.imageHash)) { withLock_(() => deleteRow_(SHEET_Q, q.id)); continue; }
     try {
       const blob = DriveApp.getFileById(q.imageId).getBlob();
-      const result = recognize_(Utilities.base64Encode(blob.getBytes()), blob.getContentType(), JSON.parse(q.context || '{}'));
+      const result = recognize_(Utilities.base64Encode(blob.getBytes()), blob.getContentType(), JSON.parse(q.context || '{}'), Math.min(stopAt, Date.now() + 90000));
       withLock_(() => upsert_(SHEET_Q, Q_COLS, Object.assign(q, { status: 'ready', result: JSON.stringify(result), error: '' })));
       done++;
     } catch (err) {
@@ -155,7 +165,7 @@ function processQueue() {
 }
 
 /* ───────── Gemini 辨識 ───────── */
-function recognize_(b64, mime, ctx) {
+function recognize_(b64, mime, ctx, deadline) {
   if (!geminiKeys_().length) throw new Error('後端還沒設定 GEMINI_API_KEY');
   const trackList = (ctx.tracks || []).map(t => {
     const lays = (t.layouts || []).map(l => Array.isArray(l) ? (l[1] ? `${l[0]}（${l[1]}）` : l[0]) : l).join(' / ');
@@ -207,10 +217,27 @@ ${trackList}`;
     for (const k of keys) {
       const tag = `gx:${k.no}:${m}`;
       if (cache.get(tag)) { lastMsg = `金鑰${k.no}/${m} 先前已滿`; continue; } // 近期已知額度滿，略過省時間
-      const res = UrlFetchApp.fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
-        method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': k.key },
-        payload: JSON.stringify(body), muteHttpExceptions: true,
-      });
+      if (deadline && Date.now() > deadline) {                               // 超過時間預算：改排隊，不再等
+        const e = new Error(`辨識逾時（已等超過時間預算；最後：${lastMsg || '無'}）`); e.quota = true; throw e;
+      }
+      // 請模型用「低思考」加快速度；若這個模型不支援此設定（回 400），記住後改用一般模式重送
+      const lowThink = !cache.get('nothink:' + m);
+      const send = withThink => {
+        const b = JSON.parse(JSON.stringify(body));
+        if (withThink) b.generationConfig.thinkingConfig = { thinkingLevel: 'low' };
+        const t = Date.now();
+        const r = UrlFetchApp.fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
+          method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': k.key },
+          payload: JSON.stringify(b), muteHttpExceptions: true,
+        });
+        console.log(`[Gemini] 金鑰${k.no}/${m}${withThink ? '（低思考）' : ''} → HTTP ${r.getResponseCode()}，${Date.now() - t}ms`);
+        return r;
+      };
+      let res = send(lowThink);
+      if (lowThink && res.getResponseCode() === 400 && /thinking/i.test(res.getContentText())) {
+        cache.put('nothink:' + m, '1', 21600);
+        res = send(false);
+      }
       const code = res.getResponseCode(), text = res.getContentText();
       if (code === 200) {
         const j = JSON.parse(text);
