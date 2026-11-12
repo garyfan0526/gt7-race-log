@@ -4,6 +4,8 @@
  * 第一次部署：
  *  1. 專案設定 → 指令碼屬性，新增：
  *       GEMINI_API_KEY = 你的 Gemini 金鑰
+ *     （可選）GEMINI_API_KEY_2 ～ GEMINI_API_KEY_6 = 其他 Google 帳號的金鑰；前一把額度用完會自動換下一把
+ *       設好後在編輯器執行 testKeys 檢查每把是否有效（不消耗額度）
  *       PASSCODE       = 自訂通關密碼（前端 ⚙ 設定要填一樣的）
  *     （可選）GEMINI_MODELS = gemini-flash-latest,gemini-flash-lite-latest   ← 依序嘗試，額度滿就換下一個
  *  2. 在編輯器選 setup 函式按「執行」，授權後會建立 Sheet、Drive 資料夾、每小時排程。
@@ -154,8 +156,7 @@ function processQueue() {
 
 /* ───────── Gemini 辨識 ───────── */
 function recognize_(b64, mime, ctx) {
-  const key = props().getProperty('GEMINI_API_KEY');
-  if (!key) throw new Error('後端還沒設定 GEMINI_API_KEY');
+  if (!geminiKeys_().length) throw new Error('後端還沒設定 GEMINI_API_KEY');
   const trackList = (ctx.tracks || []).map(t => {
     const lays = (t.layouts || []).map(l => Array.isArray(l) ? (l[1] ? `${l[0]}（${l[1]}）` : l[0]) : l).join(' / ');
     const evs = (t.events || []).map(e => `${e[0]}（${e[1]}${e[2] ? '，' + e[2] + '圈' : ''}）`).join(' / ');
@@ -197,28 +198,61 @@ ${trackList}`;
     generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: schema },
   };
 
+  // 順序：先用「最好的模型」把每一把金鑰都試過，全部額度滿了才降到下一個模型（例如 Flash-Lite）
   const models = (props().getProperty('GEMINI_MODELS') || DEFAULT_MODELS).split(',').map(s => s.trim()).filter(Boolean);
+  const keys = geminiKeys_();
+  const cache = CacheService.getScriptCache();
   let lastMsg = '';
   for (const m of models) {
-    const res = UrlFetchApp.fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
-      method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': key },
-      payload: JSON.stringify(body), muteHttpExceptions: true,
-    });
-    const code = res.getResponseCode(), text = res.getContentText();
-    if (code === 200) {
-      const j = JSON.parse(text);
-      const out = JSON.parse(j.candidates[0].content.parts.map(p => p.text || '').join(''));
-      ['laps', 'ppLimit'].forEach(k => { if (!out[k]) out[k] = ''; });
-      out.model = m;
-      return out;
+    for (const k of keys) {
+      const tag = `gx:${k.no}:${m}`;
+      if (cache.get(tag)) { lastMsg = `金鑰${k.no}/${m} 先前已滿`; continue; } // 近期已知額度滿，略過省時間
+      const res = UrlFetchApp.fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
+        method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': k.key },
+        payload: JSON.stringify(body), muteHttpExceptions: true,
+      });
+      const code = res.getResponseCode(), text = res.getContentText();
+      if (code === 200) {
+        const j = JSON.parse(text);
+        const out = JSON.parse(j.candidates[0].content.parts.map(p => p.text || '').join(''));
+        ['laps', 'ppLimit'].forEach(x => { if (!out[x]) out[x] = ''; });
+        out.model = m; out.keyNo = k.no;
+        return out;
+      }
+      lastMsg = `金鑰${k.no}/${m} → ${code}`;
+      if (code === 429) { cache.put(tag, '1', 1800); continue; }        // 額度滿：30 分鐘內不再試這把＋這個模型
+      if (code === 503 || code === 500) continue;                        // Google 忙碌：換下一把
+      if (code === 404) { cache.put(tag, '1', 21600); continue; }       // 這把金鑰叫不到這個模型
+      if (code === 403 || (code === 400 && /API key|API_KEY/i.test(text))) { cache.put(tag, '1', 21600); continue; } // 金鑰無效或被停用
+      throw new Error(`Gemini ${code}: ${text.slice(0, 300)}`);
     }
-    lastMsg = `${m} → ${code}`;
-    if (code === 429 || code === 503 || code === 404) continue; // 額度滿 / 忙碌 / 模型下架 → 換下一個
-    throw new Error(`Gemini ${code}: ${text.slice(0, 300)}`);
   }
-  const err = new Error('Gemini 額度用完或暫時無法使用（' + lastMsg + '）');
+  const err = new Error(`Gemini 額度用完或暫時無法使用（${keys.length} 把金鑰都試過；最後：${lastMsg}）`);
   err.quota = true;
   throw err;
+}
+
+// 金鑰清單：GEMINI_API_KEY 為主，GEMINI_API_KEY_2～_6 為備援（建議放不同 Google 帳號的金鑰，各有獨立免費額度）
+function geminiKeys_() {
+  const p = props(), out = [];
+  ['GEMINI_API_KEY', 'GEMINI_API_KEY_2', 'GEMINI_API_KEY_3', 'GEMINI_API_KEY_4', 'GEMINI_API_KEY_5', 'GEMINI_API_KEY_6'].forEach((n, i) => {
+    const v = String(p.getProperty(n) || '').trim();
+    if (v) out.push({ name: n, no: i + 1, key: v });
+  });
+  return out;
+}
+
+// 診斷：在編輯器執行，檢查每把金鑰是否有效、叫得到哪些設定的模型（只查模型清單，不消耗辨識額度）
+function testKeys() {
+  const models = (props().getProperty('GEMINI_MODELS') || DEFAULT_MODELS).split(',').map(s => s.trim());
+  for (const k of geminiKeys_()) {
+    const res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': k.key }, muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) { Logger.log(`❌ ${k.name}（金鑰${k.no}）無效：HTTP ${res.getResponseCode()}`); continue; }
+    const names = (JSON.parse(res.getContentText()).models || []).map(x => x.name.replace('models/', ''));
+    Logger.log(`✅ ${k.name}（金鑰${k.no}）有效；設定的模型：` + models.map(m => `${m}${names.includes(m) ? '✓' : '✗'}`).join('、'));
+  }
+  CacheService.getScriptCache().removeAll(geminiKeys_().flatMap(k => models.map(m => `gx:${k.no}:${m}`)));
+  Logger.log('（已清除「額度已滿」暫存，下次辨識會重新試每把金鑰）');
 }
 
 /* ───────── Drive ───────── */
