@@ -524,6 +524,32 @@ function closePanel() {
 const imgUrl = r => r.imageId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(r.imageId)}&sz=w1600` : (r.imageData || '');
 const posCmp = (a, b) => (+a.position || 99) - (+b.position || 99) || String(b.raceDate || '').localeCompare(String(a.raceDate || ''));
 
+/* ───── 同車＋同賽事只留最好的一筆（名次優先，同名次比總時間，再相同留新的） ───── */
+const dupKey = r => {
+  const ev = eventOfRec(r);
+  if (!r.car || (!ev && !normEv(r.event))) return '';   // 沒填賽事名的不合併
+  return [r.trackId, ev ? evKey(ev) : normEv(r.event) + '|' + (r.layout || ''), r.car].join('|');
+};
+const tSec = s => { const p = String(s || '').trim().split(':'); return !p[0] || p.some(x => !/^\d+(\.\d+)?$/.test(x)) ? Infinity : p.reduce((t, x) => t * 60 + +x, 0); };
+const recBetter = (a, b) => (+a.position || 99) - (+b.position || 99) || (tSec(a.time) < tSec(b.time) ? -1 : tSec(a.time) > tSec(b.time) ? 1 : 0)
+  || String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+// 現有資料裡被比下去的紀錄
+function dupLosers() {
+  const g = {};
+  S.records.forEach(r => { const k = dupKey(r); if (k) (g[k] = g[k] || []).push(r); });
+  return Object.values(g).filter(rs => rs.length > 1).flatMap(rs => rs.sort(recBetter).slice(1));
+}
+async function cleanupDups() {
+  const losers = dupLosers(); if (!losers.length) return;
+  const sig = losers.map(r => r.id).sort().join(',');
+  if (localStorage.getItem('gt7.dupAsk') === sig) return;   // 這批問過、按了取消就不再問
+  if (!confirm(`整理舊紀錄：同一台車在同一場賽事有 ${losers.length} 筆較差的成績。\n要刪掉、只留最好的那筆嗎？\n（截圖會進雲端硬碟垃圾桶，30 天內可還原）`)) { localStorage.setItem('gt7.dupAsk', sig); return; }
+  toastWait('CLEANING', `整理 ${losers.length} 筆重複紀錄…`, 30 + losers.length * 5);
+  let n = 0;
+  for (const r of losers) { try { await Api.deleteRecord(r.id); n++; } catch { } }
+  refreshAll(); toast(`已整理：刪掉 ${n} 筆較差的重複成績`, 4000, 'ok');
+}
+
 function renderPanel() {
   const t = trackById(S.panelTrack);
   if (!t) return closePanel();
@@ -776,8 +802,21 @@ form.onsubmit = async e => {
   const item = S.formCur, fd = Object.fromEntries(new FormData(form));
   const car = carForSave();
   if (!car) { toast('車名對不到官方清單：請從下方候選點一台，或勾選「清單沒有這台」', 5000, 'warn'); form.car.focus(); return; }
+  // 同車＋同賽事已有更好的成績 → 這筆不保留
+  const editId = item.edit?.id;
+  const draft = { trackId: fd.trackId, layout: fd.layout || '', event: fd.event.trim(), car, position: fd.position, time: fd.time.trim(), createdAt: new Date().toISOString() };
+  const key = dupKey(draft);
+  const rivals = key ? S.records.filter(r => r.id !== editId && dupKey(r) === key) : [];
+  const champ = [...rivals].sort(recBetter)[0];
+  const lose = champ && recBetter(draft, champ) > 0;
+  if (lose && editId && !confirm(`這台車在這場已有更好的第 ${champ.position} 名，\n照規則只留最好那筆，這筆會被刪掉。確定？`)) return;
   const btn = form.querySelector('[type=submit]'); btn.disabled = true;
   try {
+    if (lose && !item.edit && !item.queueId && !item.image?.imageId) {   // 截圖還沒上傳，直接略過
+      toast(`這台車在這場已有第 ${champ.position} 名（較好），這筆不保留`, 4000, 'warn');
+      if (S.formQueue.length) refreshAll(); else gotoTrack(fd.trackId);
+      openNextForm(); return;
+    }
     const img = item.image;
     let imageId = img?.imageId || '', imageData = '';
     if (img && !imageId) {
@@ -796,8 +835,16 @@ form.onsubmit = async e => {
     };
     if (imageData) rec.imageData = imageData;
     if (!imageId && !imageData && base.imageData) rec.imageData = base.imageData;
-    await Api.saveRecord(rec, item.queueId);
-    toast(`已儲存：${trackById(rec.trackId)?.zh || ''} 第 ${rec.position} 名`, 2500, 'ok');
+    if (lose) {
+      // 已上傳的截圖／待確認項目：先存再刪，讓截圖進垃圾桶、待確認清單也清掉
+      if (!editId) await Api.saveRecord(rec, item.queueId);
+      await Api.deleteRecord(rec.id);
+      toast(`這台車在這場已有第 ${champ.position} 名（較好），這筆不保留`, 4000, 'warn');
+    } else {
+      await Api.saveRecord(rec, item.queueId);
+      for (const r of rivals) await Api.deleteRecord(r.id);
+      toast(rivals.length ? `已儲存第 ${rec.position} 名，取代這台車在這場的舊成績` : `已儲存：${trackById(rec.trackId)?.zh || ''} 第 ${rec.position} 名`, 3000, 'ok');
+    }
     const more = S.formQueue.length;
     if (!more) gotoTrack(rec.trackId); else refreshAll();
     openNextForm();
@@ -934,6 +981,7 @@ async function boot() {
   if (!world) { try { await loadWorld(); } catch (e) { toast('地圖載入失敗，請檢查網路', 6000, 'err'); } }
   if (S.screen === 'home') showHome(); else if (S.screen === 'world') showWorld(); else if (S.screen === 'garage') showGarage(); else renderRegion();
   if (!S.settings.playerName) toast('第一次使用：請先到右上角設定填入遊戲內的玩家名稱', 6000, 'warn');
+  else setTimeout(() => cleanupDups().catch(() => {}), 800);
 }
 setInterval(tickClock, 30000);
 bindCarField(); bindGarage(); // garage.js
