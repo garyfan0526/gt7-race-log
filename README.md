@@ -58,7 +58,7 @@
 同一張截圖會用指紋擋掉，不會記兩次。刪除紀錄時，截圖會一起丟進雲端硬碟垃圾桶（30 天內可還原）。
 
 ## 從零部署（備查）
-1. script.google.com 建專案，貼上 `Code.gs`、`appsscript.json`；專案設定 → 指令碼屬性加 `GEMINI_API_KEY`、`PASSCODE`（可選 `GEMINI_MODELS`，預設 `gemini-flash-latest,gemini-flash-lite-latest`）。
+1. script.google.com 建專案，貼上 `Code.gs`、`appsscript.json`；專案設定 → 指令碼屬性加 `GEMINI_API_KEY`、`PASSCODE`（可選 `GEMINI_MODELS`，預設 `gemini-2.5-flash,gemini-flash-lite-latest`）。
 2. 執行 `setup` 並授權：建立 Sheet、Drive 資料夾、每小時重試排程。
 3. 部署 → 網頁應用程式，執行身分「我」、存取權「所有人」，把 `/exec` 網址填到 `app.js` 的 `DEFAULT_API_URL`。
 4. 前端推到 GitHub 開 Pages。每台裝置第一次開網頁時，在 ⚙ 設定填玩家名稱和通關密碼。
