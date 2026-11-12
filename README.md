@@ -6,7 +6,7 @@
 - ✅ 已上線：**https://garyfan0526.github.io/gt7-race-log/**（iPhone 用 Safari 開 →「分享 → 加入主畫面」）
 - ✅ AI 截圖辨識已實測成功（2026-11-12 後端 v7 後 Gary 實測正常）；手動輸入、刪除、手機與電腦同步都可用
 - **辨識怎麼找「你那一列」**：先找設定裡的玩家名稱 → 對不上就找金色／黃色字那一列 → 都找不到時 AI 仍會硬挑一列（因名次、車輛、成績是必填，常挑到第一名）。所以丟別人的結算截圖會被記成別人的成績，存檔前要核對。Gary 確認過這個邏輯、決定先不改（要改的話：schema 加「是否找到玩家」欄位，找不到就警告並留空）
-- ✅ 首頁分割畫面（世界賽道／車庫）、車庫視角（含全部車款切換）、官方車名清單（580 台）已上線（目前靜態檔版本 `?v=24`）
+- ✅ 首頁分割畫面（世界賽道／車庫）、車庫視角（含全部車款切換）、官方車名清單（580 台）已上線（目前靜態檔版本 `?v=25`）
 - ✅ 車庫總覽（v24）：進車庫不再預設選車；沒選車時電腦版右邊、手機版清單最上面顯示「車庫總覽」（開過／拿過第一／出賽、ACE 王牌、冠軍榜、最近開過），點任一台才看詳情，詳情左上「車庫總覽」可返回。手機總覽可收起（記在 localStorage gt7.ovHide）。程式在 garage.js 的 garageOverview()／pickCar()`n- ✅ 全站不用 emoji（v23）：圖示都是 index.html 的自繪 symbol，JS 用 `ico(id)` 插入；表單儲存鍵是綠色 LED「SAVE」。手機「最近紀錄」剛好並排兩張；世界賽道畫面的提示框自動放在最近紀錄上方空位（`placeToast`）。提示框：等候中用「換檔燈進度條」（`toastWait(標題, 說明, 秒數)`，綠→黃→紅亮滿）；一般提示 `toast(訊息, 毫秒, 'ok'|'warn'|'err')` 帶發光線條圖示
 - ✅ AI 辨識卡住已修（後端版本 7，2026-11-12）：原因是 3.8 Flash（`gemini-flash-latest`）過載，帶完整賽道清單時整個不回應（doPost 卡到 360 秒逾時）。`pingModels()` 實測：Flash-Lite 1.8 秒、2.5 Flash 5 秒都讀對，3.8 Flash 回 503。現在模型順序改成 `gemini-2.5-flash` → `gemini-flash-lite-latest`，不再用 3.8 Flash。`pingModels()` 留在後端當診斷工具（拿雲端最新截圖測各模型，每個模型耗 1 次額度）
 - **後端**：Apps Script「GT7 戰績簿 API」，在 **beeckham03@gmail.com** 帳號
@@ -19,7 +19,7 @@
 ## 怎麼更新
 - **網頁**：改完檔案後，把 `index.html` 裡的 `?v=N` 加 1（避免手機讀到舊快取）→ `git commit` → `git push`，約 1 分鐘後生效
 - **後端**：Apps Script 編輯器貼上新的 `Code.gs` → 部署 → 管理部署作業 → 選 `AKfycbxQEzO…` 那個 → 編輯 → 版本選「建立新版本」→ 部署（網址不變）
-- **iPhone 主畫面捷徑**：狀態列設定是「實心黑」（`apple-mobile-web-app-status-bar-style=black`）。改過這類 meta 設定後，要刪掉捷徑、用 Safari 重新「加入主畫面」才會生效
+- **iPhone 主畫面捷徑**：v25 起 standalone 模式整頁 `position: fixed` 釘在螢幕上、轉向後拉回頂端（修打橫再轉直整頁往上跑）。狀態列設定是「實心黑」（`apple-mobile-web-app-status-bar-style=black`）。改過這類 meta 設定後，要刪掉捷徑、用 Safari 重新「加入主畫面」才會生效
 - **UI 改動**：先用 `_preview/` 做預覽圖確認，再上線（`_preview/`、`_research/` 都不推上 GitHub）
 
 ## 檔案
