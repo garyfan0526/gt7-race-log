@@ -763,6 +763,12 @@ function openNextForm() {
     car: p.car, time: p.time, laps: p.laps, fastestLap: p.fastestLap, note: p.note };
   for (const [k, val] of Object.entries(v)) if (form[k] && val != null) form[k].value = val;
   if (!v.ppLimit && v.event) form.event.dispatchEvent(new Event('change'));
+  // 圈數：AI 新填的一律以賽事資料為準（結算畫面沒有總圈數，「最速圈 - 圈數 N」是最速圈在第幾圈）
+  if (!item.edit && v.event) {
+    const c = eventsOf(form.trackId.value).filter(e => normEv(e.n) === normEv(v.event));
+    const e = c.find(x => x.l === form.layout.value) || c[0];
+    if (e?.laps) form.laps.value = e.laps;
+  }
   // 車名：對得到清單就換成標準名稱；編輯清單外的舊紀錄時預設勾「清單外」，可以不改直接存
   form.carCustom.checked = !!(item.edit && p.car && !carOf(p.car));
   updateCarHint(true);

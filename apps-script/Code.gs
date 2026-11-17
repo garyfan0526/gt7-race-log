@@ -167,6 +167,24 @@ function processQueue() {
 }
 
 /* ───────── Gemini 辨識 ───────── */
+// 成績換算：第二名以後畫面只有「+差距」，用第一名總時間加回去，得到自己的總時間（例如 13'33.978 + 09.084 → 13:43.062）
+// 被套圈（"1 Lap"）或讀不出數字時保留原文
+function timeSec_(s) {
+  const p = String(s || '').trim().replace(/^\+/, '').replace(/[′'’]/g, ':').split(':');
+  return !p[0] || p.some(x => !/^\d+(\.\d+)?$/.test(x)) ? NaN : p.reduce((t, x) => t * 60 + +x, 0);
+}
+function fmtTime_(sec) {
+  const ms = Math.round(sec * 1000), h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, r = (ms % 60000) / 1000;
+  const ss = r.toFixed(3).padStart(6, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+}
+function fullTime_(time, winner, pos) {
+  const t = String(time || '').trim();
+  if (+pos === 1 || !/^\+/.test(t)) { const s = timeSec_(t); return isNaN(s) ? t : fmtTime_(s); }
+  const w = timeSec_(winner), g = timeSec_(t);
+  return isNaN(w) || isNaN(g) ? t : fmtTime_(w + g);
+}
+
 function recognize_(b64, mime, ctx, deadline, only) {
   if (!geminiKeys_().length) throw new Error('後端還沒設定 GEMINI_API_KEY');
   const trackList = (ctx.tracks || []).map(t => {
@@ -189,8 +207,9 @@ function recognize_(b64, mime, ctx, deadline, only) {
 - totalCars：結算表總共幾列（整數）
 - car：玩家車輛名稱，照畫面原文
 - time：玩家那一列 Time 欄的原文（第一名是總時間，其他是 +差距 或 "1 Lap"）
-- laps：圈數（畫面下方 Laps 的數字，沒有就給 0）
-- fastestLap：最速圈「車手名 時間」，例如 "I. Fraga 2:14.130"
+- winnerTime：第一名那一列 Time 欄的總時間原文（例如 13'33.978）
+- laps：整場比賽的總圈數。結算畫面通常沒有寫總圈數，這時給 0。注意：畫面下方「最速圈：車手名 時間 - 圈數 9」的數字是「最速圈發生在第 9 圈」，不是比賽圈數，絕對不要填進 laps
+- fastestLap：最速圈「車手名 時間」，例如 "I. Fraga 2:14.130"；畫面有寫最速圈發生在第幾圈時，接在後面寫「（第 9 圈）"
 - ppLimit：畫面上明確寫出的 PP 上限數字，沒有就給 0（注意：賽事名稱裡的數字如 Sunday Cup 400 不是 PP 上限）
 
 賽道清單：
@@ -200,7 +219,7 @@ ${trackList}`;
     type: 'OBJECT',
     properties: {
       event: { type: 'STRING' }, trackName: { type: 'STRING' }, trackId: { type: 'STRING' }, layout: { type: 'STRING' },
-      position: { type: 'INTEGER' }, totalCars: { type: 'INTEGER' }, car: { type: 'STRING' }, time: { type: 'STRING' },
+      position: { type: 'INTEGER' }, totalCars: { type: 'INTEGER' }, car: { type: 'STRING' }, time: { type: 'STRING' }, winnerTime: { type: 'STRING' },
       laps: { type: 'INTEGER' }, fastestLap: { type: 'STRING' }, ppLimit: { type: 'INTEGER' },
     },
     required: ['event', 'trackName', 'trackId', 'layout', 'position', 'totalCars', 'car', 'time'],
@@ -245,6 +264,7 @@ ${trackList}`;
         const j = JSON.parse(text);
         const out = JSON.parse(j.candidates[0].content.parts.map(p => p.text || '').join(''));
         ['laps', 'ppLimit'].forEach(x => { if (!out[x]) out[x] = ''; });
+        out.time = fullTime_(out.time, out.winnerTime, out.position);
         out.model = m; out.keyNo = k.no;
         return out;
       }
