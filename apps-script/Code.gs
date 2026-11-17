@@ -167,7 +167,7 @@ function processQueue() {
 }
 
 /* ───────── Gemini 辨識 ───────── */
-// 成績換算：第二名以後畫面只有「+差距」，用第一名總時間加回去，得到自己的總時間（例如 13'33.978 + 09.084 → 13:43.062）
+// 成績換算：第二名以後畫面只有「+差距」，用第一名總時間加回去，得到自己的總時間（例如 13'33.978 + 09.084 → 13'43.062）
 // 被套圈（"1 Lap"）或讀不出數字時保留原文
 function timeSec_(s) {
   const p = String(s || '').trim().replace(/^\+/, '').replace(/[′'’]/g, ':').split(':');
@@ -176,7 +176,7 @@ function timeSec_(s) {
 function fmtTime_(sec) {
   const ms = Math.round(sec * 1000), h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, r = (ms % 60000) / 1000;
   const ss = r.toFixed(3).padStart(6, '0');
-  return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+  return h ? `${h}:${String(m).padStart(2, '0')}'${ss}` : `${m}'${ss}`;   // 遊戲寫法 13'43.062
 }
 function fullTime_(time, winner, pos) {
   const t = String(time || '').trim();

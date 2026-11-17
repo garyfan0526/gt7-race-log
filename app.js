@@ -530,7 +530,9 @@ const dupKey = r => {
   if (!r.car || (!ev && !normEv(r.event))) return '';   // 沒填賽事名的不合併
   return [r.trackId, ev ? evKey(ev) : normEv(r.event) + '|' + (r.layout || ''), r.car].join('|');
 };
-const tSec = s => { const p = String(s || '').trim().split(':'); return !p[0] || p.some(x => !/^\d+(\.\d+)?$/.test(x)) ? Infinity : p.reduce((t, x) => t * 60 + +x, 0); };
+const tSec = s => { const p = String(s || '').trim().replace(/[′'’]/g, ':').split(':'); return !p[0] || p.some(x => !/^\d+(\.\d+)?$/.test(x)) ? Infinity : p.reduce((t, x) => t * 60 + +x, 0); };
+// 時間統一用遊戲寫法：13:43.062 → 13'43.062、1:01:36.266 → 1:01'36.266（已是 ' 寫法的不動）
+const gtTime = s => String(s ?? '').replace(/(\d+:)?(\d{1,2}):(\d{2}\.\d{1,3})(?!\d)/g, (_, h, m, ss) => `${h || ''}${m}'${ss}`);
 const recBetter = (a, b) => (+a.position || 99) - (+b.position || 99) || (tSec(a.time) < tSec(b.time) ? -1 : tSec(a.time) > tSec(b.time) ? 1 : 0)
   || String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
 // 現有資料裡被比下去的紀錄
@@ -591,7 +593,7 @@ function evCard(e, big, best) {
     <div class="ec-name">${esc(e.n)}</div>
     <div class="ec-lo">${esc(e.l)}</div>
     ${e.cars || e.tyres ? `<div class="ec-rule">${esc([e.cars, e.tyres].filter(Boolean).join(' · '))}</div>` : ''}
-    <div class="ec-res">${best ? `${trophy(best.position)}<div class="ec-car"><div>${esc(carLabel(best.car))}</div><small>${esc(best.time || '')}</small></div>${(() => { const n = recsOfEvent(e).length; return n > 1 && !big ? `<span class="ec-n">共 ${n} 筆</span>` : ''; })()}`
+    <div class="ec-res">${best ? `${trophy(best.position)}<div class="ec-car"><div>${esc(carLabel(best.car))}</div><small>${esc(gtTime(best.time || ''))}</small></div>${(() => { const n = recsOfEvent(e).length; return n > 1 && !big ? `<span class="ec-n">共 ${n} 筆</span>` : ''; })()}`
       : '<span class="ec-none">尚未紀錄</span>'}</div>
   </div>`;
 }
@@ -612,10 +614,10 @@ function recRow(r, isBest, showEvent) {
       ${url ? `<img class="thumb" src="${esc(url)}" data-full="${esc(url)}" alt="" loading="lazy">` : ''}
     </div>
     <div class="rec-st">
-      ${cell('時間', esc(r.time || '–'))}
+      ${cell('時間', esc(gtTime(r.time || '–')))}
       ${cell('名次', `${esc(r.position || '–')}${r.totalCars ? `<i>/${esc(r.totalCars)}</i>` : ''}`)}
       ${cell('圈數', esc(r.laps || '–'))}
-      ${cell('最速圈', esc(fl ? fl[1] : '–'))}
+      ${cell('最速圈', esc(fl ? gtTime(fl[1]) : '–'))}
     </div>
     ${r.note ? `<div class="note">${esc(r.note)}</div>` : ''}
     <div class="ops"><button data-edit="${esc(r.id)}">編輯</button><button data-del="${esc(r.id)}">刪除</button></div>
@@ -770,7 +772,7 @@ function openNextForm() {
   form.trackId.value = trackId;
   fillLayouts(p.layout || ''); fillEventList();
   const v = { event: p.event, ppLimit: p.ppLimit, position: p.position, totalCars: p.totalCars, raceDate: p.raceDate || today(),
-    car: p.car, time: p.time, laps: p.laps, fastestLap: p.fastestLap, note: p.note };
+    car: p.car, time: p.time && gtTime(p.time), laps: p.laps, fastestLap: p.fastestLap && gtTime(p.fastestLap), note: p.note };
   for (const [k, val] of Object.entries(v)) if (form[k] && val != null) form[k].value = val;
   if (!v.ppLimit && v.event) form.event.dispatchEvent(new Event('change'));
   // 圈數：AI 新填的一律以賽事資料為準（結算畫面沒有總圈數，「最速圈 - 圈數 N」是最速圈在第幾圈）
