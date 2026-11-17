@@ -302,11 +302,11 @@ function pingModels() {
   const q = readAll_(SHEET_Q, Q_COLS).find(x => x.context);
   const ctx = q ? JSON.parse(q.context) : { playerName: '', tracks: [] };
   Logger.log(`測試截圖：${f.getName()}（${f.getDateCreated()}，${Math.round(blob.getBytes().length / 1024)} KB）；賽道清單 ${ctx.tracks.length} 條`);
-  for (const m of ['gemini-flash-lite-latest', 'gemini-2.5-flash', 'gemini-flash-latest']) {
+  for (const m of ['gemini-2.5-flash', 'gemini-flash-lite-latest']) {
     const t = Date.now();
     try {
       const out = recognize_(b64, blob.getContentType(), ctx, 0, { model: m });
-      Logger.log(`✅ ${m} → ${Date.now() - t}ms：${out.trackName}／${out.car}／第 ${out.position} 名`);
+      Logger.log(`✅ ${m} → ${Date.now() - t}ms：${out.trackName}／${out.car}／第 ${out.position} 名／時間 ${out.time}（第一名 ${out.winnerTime || '-'}）／圈數 ${out.laps || '-'}／最速圈 ${out.fastestLap || '-'}`);
     } catch (e) { Logger.log(`❌ ${m} → ${Date.now() - t}ms：${String(e.message).slice(0, 200)}`); }
   }
 }
