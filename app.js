@@ -599,7 +599,8 @@ function evCard(e, big, best) {
 function recRow(r, isBest, showEvent) {
   const url = imgUrl(r);
   // 數據格：車名一整行＋四格（時間／名次／圈數／最速圈），每格有小標題
-  const fl = String(r.fastestLap || '').trim().match(/(\S+)$/);
+  // 最速圈只取時間（後面可能接「（第 9 圈）」，不能取最後一段字）
+  const flT = String(r.fastestLap || '').match(/(?:\d+[:'′’])?\d{1,2}\.\d{3}/g), fl = flT && [, flT[flT.length - 1]];
   const cell = (k, v) => `<div><small>${k}</small><b>${v}</b></div>`;
   return `<div class="rec ${isBest ? 'best' : ''}">
     <div class="rec-top">
