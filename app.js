@@ -568,7 +568,7 @@ function renderPanel() {
     body.innerHTML = `<button class="btn small" data-back>${ico('iBack')} 全部賽事</button>
       <div class="ev-detail">${evCard(cur, true)}</div>
       <button class="btn primary ev-add" data-addev="${esc(evKey(cur))}">＋ 記錄這場</button>
-      ${rs.length ? `<h4 class="others-h">全部紀錄 ${rs.length} 筆（依名次、日期排序；每筆都可以單獨編輯或刪除）</h4>
+      ${rs.length ? `<div class="rh"><h4>全部紀錄</h4><span class="cnt">${rs.length}</span><small>依名次排序</small></div>
         <div class="group">${rs.map((r, i) => recRow(r, i === 0)).join('')}</div>` : '<div class="empty">這場還沒有紀錄</div>'}`;
     return;
   }
@@ -598,16 +598,25 @@ function evCard(e, big, best) {
 
 function recRow(r, isBest, showEvent) {
   const url = imgUrl(r);
+  // 數據格：車名一整行＋四格（時間／名次／圈數／最速圈），每格有小標題
+  const fl = String(r.fastestLap || '').trim().match(/(\S+)$/);
+  const cell = (k, v) => `<div><small>${k}</small><b>${v}</b></div>`;
   return `<div class="rec ${isBest ? 'best' : ''}">
-    ${trophy(r.position)}
-    ${url ? `<img class="thumb" src="${esc(url)}" data-full="${esc(url)}" alt="" loading="lazy">` : ''}
-    <div class="info">
-      <div class="car">${esc(carLabel(r.car))}<span class="src">${r.source === 'ai' ? 'AI' : '手動'}</span></div>
-      ${showEvent ? `<div class="meta">${esc([r.event || '（未填賽事）', r.layout].filter(Boolean).join(' · '))}</div>` : ''}
-      <div class="meta">${[r.time, r.totalCars ? `${r.position}/${r.totalCars}` : '', r.laps ? r.laps + ' 圈' : '', r.raceDate].filter(Boolean).map(esc).join('　·　')}</div>
-      ${r.fastestLap ? `<div class="meta">最速圈 ${esc(r.fastestLap)}</div>` : ''}
-      ${r.note ? `<div class="note">${esc(r.note)}</div>` : ''}
+    <div class="rec-top">
+      ${trophy(r.position)}
+      <div class="nm">
+        <div class="car">${esc(carLabel(r.car))}<span class="src">${r.source === 'ai' ? 'AI' : '手動'}</span></div>
+        <div class="meta">${esc([showEvent ? [r.event || '（未填賽事）', r.layout].filter(Boolean).join(' · ') : '', r.raceDate].filter(Boolean).join('　'))}</div>
+      </div>
+      ${url ? `<img class="thumb" src="${esc(url)}" data-full="${esc(url)}" alt="" loading="lazy">` : ''}
     </div>
+    <div class="rec-st">
+      ${cell('時間', esc(r.time || '–'))}
+      ${cell('名次', `${esc(r.position || '–')}${r.totalCars ? `<i>/${esc(r.totalCars)}</i>` : ''}`)}
+      ${cell('圈數', esc(r.laps || '–'))}
+      ${cell('最速圈', esc(fl ? fl[1] : '–'))}
+    </div>
+    ${r.note ? `<div class="note">${esc(r.note)}</div>` : ''}
     <div class="ops"><button data-edit="${esc(r.id)}">編輯</button><button data-del="${esc(r.id)}">刪除</button></div>
   </div>`;
 }
