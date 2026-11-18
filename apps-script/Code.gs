@@ -14,7 +14,7 @@
 
 const SHEET_REC = '紀錄', SHEET_TRK = '自訂賽道', SHEET_Q = '排隊';
 const REC_COLS = ['id', 'createdAt', 'raceDate', 'trackId', 'layout', 'event', 'ppLimit', 'position', 'totalCars',
-  'car', 'time', 'laps', 'fastestLap', 'note', 'imageId', 'imageHash', 'source', 'carBox'];   // carBox：截圖裡車圖的位置「ymin,xmin,ymax,xmax」（0–1000）
+  'car', 'time', 'laps', 'fastestLap', 'note', 'imageId', 'imageHash', 'source'];
 const TRK_COLS = ['id', 'zh', 'en', 'country', 'cc', 'region', 'lat', 'lon', 'layouts'];
 const Q_COLS = ['id', 'createdAt', 'imageId', 'imageHash', 'status', 'result', 'error', 'context'];
 // 2026-11-12 實測：gemini-flash-latest（3.8 Flash）常過載、帶完整賽道清單時會整個卡住不回應 → 不用
@@ -178,12 +178,6 @@ function fmtTime_(sec) {
   const ss = r.toFixed(3).padStart(6, '0');
   return h ? `${h}:${String(m).padStart(2, '0')}'${ss}` : `${m}'${ss}`;   // 遊戲寫法 13'43.062
 }
-// 車圖框：檢查是 4 個 0–1000 的數字、而且有合理大小，存成「ymin,xmin,ymax,xmax」字串；不合理就給空字串
-function boxStr_(b) {
-  if (!Array.isArray(b) || b.length !== 4 || b.some(v => typeof v !== 'number' || v < 0 || v > 1000)) return '';
-  const [y0, x0, y1, x1] = b;
-  return y1 - y0 >= 10 && x1 - x0 >= 20 ? b.map(Math.round).join(',') : '';
-}
 function fullTime_(time, winner, pos) {
   const t = String(time || '').trim();
   if (+pos === 1 || !/^\+/.test(t)) { const s = timeSec_(t); return isNaN(s) ? t : fmtTime_(s); }
@@ -216,7 +210,6 @@ function recognize_(b64, mime, ctx, deadline, only) {
 - winnerTime：第一名那一列 Time 欄的總時間原文（例如 13'33.978）
 - laps：整場比賽的總圈數。結算畫面通常沒有寫總圈數，這時給 0。注意：畫面下方「最速圈：車手名 時間 - 圈數 9」的數字是「最速圈發生在第 9 圈」，不是比賽圈數，絕對不要填進 laps
 - fastestLap：最速圈「車手名 時間」，例如 "I. Fraga 2:14.130"；畫面有寫最速圈發生在第幾圈時，接在後面寫「（第 9 圈）"
-- carBox：玩家那一列右側那張「車輛小圖」在整張截圖中的位置，格式 [ymin, xmin, ymax, xmax]，用 0–1000 的正規化座標（左上角 0,0、右下角 1000,1000）。只框那張車圖本身，不要包含車名文字或時間
 - ppLimit：畫面上明確寫出的 PP 上限數字，沒有就給 0（注意：賽事名稱裡的數字如 Sunday Cup 400 不是 PP 上限）
 
 賽道清單：
@@ -228,7 +221,6 @@ ${trackList}`;
       event: { type: 'STRING' }, trackName: { type: 'STRING' }, trackId: { type: 'STRING' }, layout: { type: 'STRING' },
       position: { type: 'INTEGER' }, totalCars: { type: 'INTEGER' }, car: { type: 'STRING' }, time: { type: 'STRING' }, winnerTime: { type: 'STRING' },
       laps: { type: 'INTEGER' }, fastestLap: { type: 'STRING' }, ppLimit: { type: 'INTEGER' },
-      carBox: { type: 'ARRAY', items: { type: 'INTEGER' } },
     },
     required: ['event', 'trackName', 'trackId', 'layout', 'position', 'totalCars', 'car', 'time'],
   };
@@ -273,7 +265,6 @@ ${trackList}`;
         const out = JSON.parse(j.candidates[0].content.parts.map(p => p.text || '').join(''));
         ['laps', 'ppLimit'].forEach(x => { if (!out[x]) out[x] = ''; });
         out.time = fullTime_(out.time, out.winnerTime, out.position);
-        out.carBox = boxStr_(out.carBox);
         out.model = m; out.keyNo = k.no;
         return out;
       }
@@ -318,30 +309,6 @@ function pingModels() {
       Logger.log(`✅ ${m} → ${Date.now() - t}ms：${out.trackName}／${out.car}／第 ${out.position} 名／時間 ${out.time}（第一名 ${out.winnerTime || '-'}）／圈數 ${out.laps || '-'}／最速圈 ${out.fastestLap || '-'}`);
     } catch (e) { Logger.log(`❌ ${m} → ${Date.now() - t}ms：${String(e.message).slice(0, 200)}`); }
   }
-}
-
-// 補車圖位置：在編輯器執行。把「有截圖、還沒有 carBox」的舊紀錄重新請 AI 讀一次，只寫回 carBox（名次對不上就略過，不動其他欄位）
-function backfillCarBox() {
-  const sh = sheet_(SHEET_REC);
-  if (!sh.getRange(1, REC_COLS.length).getValue()) sh.getRange(1, REC_COLS.length).setValue('carBox');
-  const q = readAll_(SHEET_Q, Q_COLS).find(x => x.context);
-  const ctx = q ? JSON.parse(q.context) : { playerName: '', tracks: [] };
-  ctx.tracks = [];   // 只要車圖位置，不用賽道清單（提示詞短、比較快）
-  const todo = readAll_(SHEET_REC, REC_COLS).filter(r => r.imageId && !r.carBox);
-  const stopAt = Date.now() + 4.5 * 60 * 1000;
-  let ok = 0, skip = 0;
-  Logger.log(`要補 ${todo.length} 筆（玩家名稱：${ctx.playerName || '未知，靠金色字'}）`);
-  for (const r of todo) {
-    if (Date.now() > stopAt) { Logger.log('時間快到了，剩下的請再執行一次'); break; }
-    try {
-      const blob = DriveApp.getFileById(r.imageId).getBlob();
-      const out = recognize_(Utilities.base64Encode(blob.getBytes()), blob.getContentType(), ctx, stopAt);
-      if (!out.carBox || +out.position !== +r.position) { skip++; Logger.log(`略過 ${r.car}：AI 讀到第 ${out.position} 名（紀錄是第 ${r.position} 名）／框 ${out.carBox || '無'}`); continue; }
-      withLock_(() => { const row = findRow_(SHEET_REC, r.id); if (row > 0) sh.getRange(row, REC_COLS.length).setNumberFormat('@').setValue(out.carBox); });
-      ok++; Logger.log(`✅ ${r.car} 第 ${r.position} 名 → ${out.carBox}`);
-    } catch (e) { skip++; Logger.log(`❌ ${r.car}：${String(e.message).slice(0, 150)}`); if (e.quota) break; }
-  }
-  Logger.log(`完成：補好 ${ok} 筆，略過 ${skip} 筆`);
 }
 
 // 診斷：在編輯器執行，檢查每把金鑰是否有效、叫得到哪些設定的模型（只查模型清單，不消耗辨識額度）
