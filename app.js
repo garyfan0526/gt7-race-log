@@ -849,6 +849,8 @@ form.onsubmit = async e => {
       position: fd.position, totalCars: fd.totalCars, raceDate: fd.raceDate, car,
       time: fd.time.trim(), laps: fd.laps, fastestLap: fd.fastestLap.trim(), note: fd.note.trim(),
       imageId, imageHash: img?.hash || base.imageHash || '',
+      // 車圖位置（車庫用）：換了新截圖就作廢
+      carBox: img && !img.imageId && !item.prefill ? '' : (item.prefill?.carBox || base.carBox || ''),
       source: item.edit ? base.source : item.source,
     };
     if (imageData) rec.imageData = imageData;
