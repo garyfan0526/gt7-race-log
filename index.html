@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,600&family=Kanit:ital,wght@1,900&family=Orbitron:wght@700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css">
-<link rel="stylesheet" href="style.css?v=35">
+<link rel="stylesheet" href="style.css?v=36">
 </head>
 <body data-theme="amber">
 
@@ -35,7 +35,7 @@
   <symbol id="iDown" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
 </defs></svg>
 <!-- ── 頂列（仿遊戲狀態列） ── -->
-<header class="topbar">
+<header class="topbar"><i class="tb-ver" title="車輛清單對應的遊戲版本">1.72</i>
   <div class="tb-logo" id="btnHome" title="回首頁">GT</div>
   <div class="tb-cell tb-title"><small id="tbCrumb">戰績簿</small><span id="tbPlace">世界賽道</span></div>
   <div class="tb-cell"><small>賽事紀錄</small><span class="num" id="tbRecords">0</span></div>
@@ -49,7 +49,7 @@
     <button class="btn led hidden" id="btnQueue" title="待確認"><svg class="ico"><use href="#iWait"/></svg><span id="queueCount">0</span></button>
     <button class="btn led icon" id="btnSettings" title="設定"><svg class="ico"><use href="#iGear"/></svg></button>
   </div>
-  <div class="tb-cell tb-clock"><span class="num" id="tbTime">--:--</span><small id="tbDate"></small></div>
+  <div class="tb-cell tb-clock"><small class="num" id="tbDate"></small><span class="num" id="tbTime">--:--</span></div>
 </header>
 
 <div class="banner hidden" id="banner"></div>
@@ -285,10 +285,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
-<script src="tracks.js?v=35"></script>
-<script src="events.js?v=35"></script>
-<script src="cars.js?v=35"></script>
-<script src="garage.js?v=35"></script>
-<script src="app.js?v=35"></script>
+<script src="tracks.js?v=36"></script>
+<script src="events.js?v=36"></script>
+<script src="cars.js?v=36"></script>
+<script src="garage.js?v=36"></script>
+<script src="app.js?v=36"></script>
 </body>
 </html>

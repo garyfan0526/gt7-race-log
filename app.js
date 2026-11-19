@@ -134,7 +134,7 @@ function renderTopbar() {
 function tickClock() {
   const d = new Date();
   $('#tbTime').textContent = d.toTimeString().slice(0, 5);
-  $('#tbDate').textContent = `${d.getMonth() + 1}月 ${d.getDate()}日`;
+  $('#tbDate').textContent = `${d.getMonth() + 1}/${d.getDate()}`;
 }
 function renderBanner() {
   const b = $('#banner');
