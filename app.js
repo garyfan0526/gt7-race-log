@@ -587,13 +587,13 @@ function renderPanel() {
 
 function evCard(e, big, best) {
   if (best === undefined) best = recsOfEvent(e).sort(posCmp)[0];
-  const p = best ? +best.position : 0;
+  const p = best ? +best.position : 0, n = best && !big ? recsOfEvent(e).length : 0;
   return `<div class="evcard ${p === 1 ? 'won' : best ? 'tried' : 'new'} ${big ? 'big' : ''}" data-ev="${esc(evKey(e))}">
-    <div class="ec-top">${esc(evMeta(e))}</div>
+    <div class="ec-top">${esc(evMeta(e))}${n > 1 ? `<b class="ec-n">${n} 筆</b>` : ''}</div>
     <div class="ec-name">${esc(e.n)}</div>
     <div class="ec-lo">${esc(e.l)}</div>
     ${e.cars || e.tyres ? `<div class="ec-rule">${esc([e.cars, e.tyres].filter(Boolean).join(' · '))}</div>` : ''}
-    <div class="ec-res">${best ? `${trophy(best.position)}<div class="ec-car"><div>${esc(carLabel(best.car))}</div><small>${esc(gtTime(best.time || ''))}</small></div>${(() => { const n = recsOfEvent(e).length; return n > 1 && !big ? `<span class="ec-n">共 ${n} 筆</span>` : ''; })()}${carPic({ recs: [best] }, 'ecpic')}`
+    <div class="ec-res">${best ? `${trophy(best.position)}<div class="ec-car"><div>${esc(carLabel(best.car))}</div><small>${esc(gtTime(best.time || ''))}</small></div>${carPic({ recs: [best] }, 'ecpic')}`
       : '<span class="ec-none">尚未紀錄</span>'}</div>
   </div>`;
 }

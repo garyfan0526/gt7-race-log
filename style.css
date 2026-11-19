@@ -323,7 +323,8 @@ h4 { margin: 0 0 10px; }
 
 /* ───────── GT 標誌、手機頂列合併選單、賽事筆數 ───────── */
 .tb-logo { font-family: "Kanit", var(--en); font-style: italic; font-weight: 900; font-size: 22px; letter-spacing: -2px; padding-right: 3px; }
-.evcard .ec-n { margin-left: auto; font-size: 11px; color: var(--muted); white-space: nowrap; flex: none; }
+.evcard .ec-top { position: relative; }
+.evcard .ec-n { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font: 700 10px/1 var(--en); color: #fff; background: #4a505c; border-radius: 8px; padding: 2px 6px; white-space: nowrap; }
 .tb-break { display: none; }
 @media (max-width: 760px) {
   .tb-logo { font-size: 16px; }
@@ -587,7 +588,6 @@ html.standalone body { position: fixed; inset: 0; height: auto; width: auto; }
 .ghero .cpic i, .ec-res .cpic i { filter: url(#gtSharp); }   /* 只對接近原尺寸的大圖銳利化；清單小圖是縮小的，銳利化反而刺眼 */
 .ghero .cpic { width: 150px; }   /* 接近原尺寸，電腦上才不糊 */
 .evcard .ec-res .cpic { width: 100px; margin-left: auto; } .evcard.big .ec-res .cpic { width: 120px; }
-.evcard .ec-res .ec-n + .cpic { margin-left: 6px; }
 /* 超過 12 台的結算表底色偏亮灰，壓暗讓車圖跟其他車一樣融進深色背景 */
 .cpic.lite i { filter: url(#gtDim); } .ghero .cpic.lite i, .ec-res .cpic.lite i { filter: url(#gtDimSharp); }
 @media (max-width: 760px) { .evcard:not(.big) .ec-res { gap: 6px; padding: 8px; } .evcard:not(.big) .ec-res .cpic { width: 62px; } .evcard:not(.big) .ec-car { flex: 1; } }
