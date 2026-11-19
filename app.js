@@ -593,7 +593,7 @@ function evCard(e, big, best) {
     <div class="ec-name">${esc(e.n)}</div>
     <div class="ec-lo">${esc(e.l)}</div>
     ${e.cars || e.tyres ? `<div class="ec-rule">${esc([e.cars, e.tyres].filter(Boolean).join(' · '))}</div>` : ''}
-    <div class="ec-res">${best ? `${trophy(best.position)}<div class="ec-car"><div>${esc(carLabel(best.car))}</div><small>${esc(gtTime(best.time || ''))}</small></div>${(() => { const n = recsOfEvent(e).length; return n > 1 && !big ? `<span class="ec-n">共 ${n} 筆</span>` : ''; })()}`
+    <div class="ec-res">${best ? `${trophy(best.position)}<div class="ec-car"><div>${esc(carLabel(best.car))}</div><small>${esc(gtTime(best.time || ''))}</small></div>${(() => { const n = recsOfEvent(e).length; return n > 1 && !big ? `<span class="ec-n">共 ${n} 筆</span>` : ''; })()}${carPic({ recs: [best] }, 'ecpic')}`
       : '<span class="ec-none">尚未紀錄</span>'}</div>
   </div>`;
 }
@@ -675,7 +675,7 @@ async function hashFile(file) {
 }
 async function prepImage(file) {
   const [hash, img] = await Promise.all([hashFile(file), loadImage(file)]);
-  const full = toJpeg(img, 1600, 0.85);
+  const full = toJpeg(img, 1920, 0.85);   // 保留 PS 截圖原始 1920 寬（車庫車圖才不會太小）
   return { hash, full, thumb: toJpeg(img, 720, 0.6), data: full.split(',')[1], mime: 'image/jpeg' };
 }
 const aiTrackContext = () => allTracks().map(t => ({ id: t.id, zh: t.zh, en: t.en || '', layouts: t.layouts,

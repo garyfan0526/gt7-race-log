@@ -574,11 +574,15 @@ html.standalone body { position: fixed; inset: 0; height: auto; width: auto; }
 .bpanel .gbadge:hover { filter: brightness(1.2); }
 
 /* ── 車圖（從結算截圖裁出，garage.js 的 carPic()）── */
-.cpic { flex: none; background-repeat: no-repeat; border-radius: 3px;
+.cpic { flex: none; border-radius: 3px;
   -webkit-mask-image: radial-gradient(ellipse 62% 70% at 50% 52%, #000 55%, transparent 100%); mask-image: radial-gradient(ellipse 62% 70% at 50% 52%, #000 55%, transparent 100%); }
 .gcar .cpic { width: 62px; margin-left: -6px; }
 .grank .cpic { width: 58px; }
 .gace .cpic { width: 96px; }
 .ghero { display: flex; align-items: center; gap: 14px; } .ghero .tx { flex: 1; min-width: 0; }
-.ghero .cpic { width: 230px; }
+.cpic i { display: block; width: 100%; height: 100%; background-repeat: no-repeat; }
+.ghero .cpic i, .ec-res .cpic i { filter: url(#gtSharp); }   /* 只對接近原尺寸的大圖銳利化；清單小圖是縮小的，銳利化反而刺眼 */
+.ghero .cpic { width: 150px; }   /* 接近原尺寸，電腦上才不糊 */
+.evcard .ec-res .cpic { width: 100px; margin-left: auto; } .evcard.big .ec-res .cpic { width: 120px; }
+.evcard .ec-res .ec-n + .cpic { margin-left: 6px; }
 @media (max-width: 760px) { .ghero .cpic { width: 150px; } .gcar .cpic { width: 54px; } }
